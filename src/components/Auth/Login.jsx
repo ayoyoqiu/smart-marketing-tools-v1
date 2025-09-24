@@ -55,14 +55,14 @@ const Login = () => {
           <Title level={2} style={{ color: '#1890ff', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <img 
               src="/images/ai-robot-icon.png" 
-              alt="智能消息机器人" 
+              alt="智能营销小工具" 
               style={{ 
                 width: 28, 
                 height: 28, 
                 objectFit: 'contain'
               }} 
             />
-            智能消息机器人
+            智能营销小工具
           </Title>
           <Text type="secondary">请登录您的账户</Text>
         </div>
@@ -131,7 +131,7 @@ const Login = () => {
 
         <div style={{ marginTop: '24px', textAlign: 'center' }}>
           <Text type="secondary" style={{ fontSize: '12px' }}>
-            智能消息机器人 v2.1 - 多用户版本
+            智能营销小工具 v2.1 - 多用户版本
           </Text>
         </div>
       </Card>

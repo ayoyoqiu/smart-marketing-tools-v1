@@ -203,7 +203,7 @@ const Home = () => {
     {
       title: '地址管理',
       icon: <SettingOutlined style={{ color: '#52c41a' }} />,
-      description: '管理智能消息机器人的Webhook地址，支持批量导入和导出',
+      description: '管理智能营销小工具的Webhook地址，支持批量导入和导出',
       features: [
         '添加/编辑/删除Webhook地址',
         '支持Excel批量导入地址',
