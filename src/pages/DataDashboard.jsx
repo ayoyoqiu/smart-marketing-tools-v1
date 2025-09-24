@@ -35,8 +35,7 @@ import { supabase, TABLES, TASK_STATUS, MESSAGE_TYPE } from '../../supabaseClien
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useBatchDataCache } from '../hooks/useDataCache';
-import ProfessionalCalendarView from '../components/Calendar/ProfessionalCalendarView';
-import TaskDetailModal from '../components/Calendar/TaskDetailModal';
+import { ProfessionalCalendarView, TaskDetailModal } from '../components/Calendar';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
