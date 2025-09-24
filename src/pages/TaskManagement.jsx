@@ -1520,7 +1520,6 @@ const TaskManagement = () => {
       title: '任务名称',
       dataIndex: 'title',
       key: 'title',
-      width: 220,
       ellipsis: { showTitle: false },
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
@@ -1729,9 +1728,9 @@ const TaskManagement = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
-          scroll={{ x: 'max-content' }}
           size="small"
-          tableLayout="fixed"
+          style={{ width: '100%' }}
+          scroll={{ x: '100%' }}
           locale={{
             emptyText: loading ? (
               <div style={{ padding: '40px 0' }}>
