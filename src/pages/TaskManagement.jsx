@@ -1513,7 +1513,7 @@ const TaskManagement = () => {
       title: '任务ID',
       dataIndex: 'id',
       key: 'id',
-      width: 180,
+      width: 160,
       fixed: 'left',
       render: (id) => id ? <span style={{ fontSize: 12, color: '#888' }}>{id.slice(0, 8)}...</span> : '-' 
     },
@@ -1521,21 +1521,26 @@ const TaskManagement = () => {
       title: '任务名称',
       dataIndex: 'title',
       key: 'title',
-      width: 150,
-      ellipsis: true,
+      width: 220,
+      ellipsis: { showTitle: false },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text}</span>
+        </Tooltip>
+      )
     },
     {
       title: '创建人',
       dataIndex: 'creator',
       key: 'creator',
-      width: 80,
+      width: 100,
       render: (creator) => creator || '-' 
     },
     {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      width: 100,
+      width: 90,
       render: (type) => {
         const typeMap = {
           [MESSAGE_TYPE.TEXT]: { color: 'blue', text: '文本' },
@@ -1552,7 +1557,7 @@ const TaskManagement = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 80,
+      width: 90,
       render: (status) => {
         const statusMap = {
           [TASK_STATUS.PENDING]: { color: 'orange', text: '等待中' },
@@ -1568,19 +1573,19 @@ const TaskManagement = () => {
       title: '计划时间',
       dataIndex: 'scheduled_time',
       key: 'scheduled_time',
-      width: 160,
+      width: 140,
       render: (time) => time ? dayjs(time).format('MM-DD HH:mm') : '-',
     },
     {
       title: '错误信息',
       dataIndex: 'error_message',
       key: 'error_message',
-      width: 120,
-      ellipsis: true,
+      width: 200,
+      ellipsis: { showTitle: false },
       render: (errorMsg, record) => {
         if (record.status === TASK_STATUS.FAILED && errorMsg) {
           return (
-            <Tooltip title={errorMsg}>
+            <Tooltip title={errorMsg} placement="topLeft">
               <span style={{ color: '#ff4d4f', fontSize: 12, cursor: 'pointer' }}>
                 {errorMsg.length > 15 ? errorMsg.substring(0, 15) + '...' : errorMsg}
               </span>
@@ -1593,7 +1598,7 @@ const TaskManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 200,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small" wrap>
