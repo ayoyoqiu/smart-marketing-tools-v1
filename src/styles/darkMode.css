@@ -1,0 +1,219 @@
+[data-theme="dark"] .upload-card-scale {
+  transform: scale(0.7);
+}
+[data-theme="dark"] .image-upload-root {
+  filter: none;
+}
+
+[data-theme="dark"] .image-upload-drag {
+  background-color: #141414 !important;
+  border-color: #303030 !important;
+}
+
+[data-theme="dark"] .image-upload-drag .ant-upload-drag-icon .anticon {
+  color: #69b1ff !important;
+}
+
+[data-theme="dark"] .image-upload-drag .ant-upload-text,
+[data-theme="dark"] .image-upload-drag .ant-upload-hint {
+  color: #bfbfbf !important;
+}
+/* 深色模式下的角色显示样式 */
+
+/* Header中的角色显示按钮 - 深色模式 */
+.role-display-dark {
+  background-color: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.role-display-dark .ant-typography {
+  color: #fff !important;
+  text-shadow: none !important;
+}
+
+/* 深色模式下的所有图标都使用白色 */
+.role-display-dark .anticon {
+  color: #fff !important;
+}
+
+/* Sidebar中的角色信息区域 - 深色模式 */
+.role-info-dark {
+  background-color: #1a1a1a !important;
+  border-bottom: 1px solid #333 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.role-info-dark .ant-typography {
+  color: #fff !important;
+}
+
+.role-info-dark .ant-typography.ant-typography-secondary {
+  color: #ccc !important;
+}
+
+/* 深色模式下的图标颜色 - 统一使用白色 */
+.role-info-dark .anticon {
+  color: #fff !important;
+}
+
+/* 确保所有角色相关图标都是白色 */
+.role-display-dark .anticon,
+.role-info-dark .anticon {
+  color: #fff !important;
+}
+
+/* 深色模式下的用户昵称和菜单文字 */
+.role-display-dark .ant-typography,
+.role-display-dark .ant-btn,
+.role-display-dark .ant-dropdown-menu-item,
+.role-display-dark .ant-dropdown-menu-submenu-title {
+  color: #fff !important;
+}
+
+/* 深色模式下的用户菜单区域 */
+.role-display-dark .ant-dropdown-menu,
+.role-display-dark .ant-dropdown-menu-submenu {
+  background-color: #1a1a1a !important;
+}
+
+.role-display-dark .ant-dropdown-menu-item:hover,
+.role-display-dark .ant-dropdown-menu-submenu-title:hover {
+  background-color: #333 !important;
+  color: #fff !important;
+}
+
+/* 确保用户昵称显示为白色 */
+.role-display-dark .ant-typography,
+.role-display-dark .ant-typography-strong,
+.role-display-dark .ant-typography-text {
+  color: #fff !important;
+}
+
+/* 深色模式下的全局用户界面元素 */
+[data-theme="dark"] .ant-dropdown-menu-item,
+[data-theme="dark"] .ant-dropdown-menu-submenu-title,
+[data-theme="dark"] .ant-dropdown-menu-submenu {
+  color: #fff !important;
+}
+
+[data-theme="dark"] .ant-dropdown-menu-item:hover,
+[data-theme="dark"] .ant-dropdown-menu-submenu-title:hover {
+  background-color: #333 !important;
+  color: #fff !important;
+}
+
+/* 确保Header中的用户信息在深色模式下是白色 */
+[data-theme="dark"] .ant-layout-header .ant-typography,
+[data-theme="dark"] .ant-layout-header .ant-btn,
+[data-theme="dark"] .ant-layout-header .ant-dropdown-trigger {
+  color: #fff !important;
+}
+
+/* 角色颜色区分系统 - 用户昵称根据角色显示不同颜色 */
+/* 普通用户 - 蓝色 */
+[data-theme="dark"] .ant-layout-header .user-nickname.user-role-user,
+[data-theme="dark"] .ant-layout-header .user-nickname[data-role="user"] {
+  color: #4dabf7 !important;
+}
+
+/* 管理用户 - 绿色 */
+[data-theme="dark"] .ant-layout-header .user-nickname.user-role-admin,
+[data-theme="dark"] .ant-layout-header .user-nickname[data-role="admin"] {
+  color: #6bcf7f !important;
+}
+
+/* 超级管理用户 - 红色 */
+[data-theme="dark"] .ant-layout-header .user-nickname.user-role-super_admin,
+[data-theme="dark"] .ant-layout-header .user-nickname[data-role="super_admin"] {
+  color: #ff6b6b !important;
+}
+
+/* 邮箱文字保持浅灰色/白色 */
+[data-theme="dark"] .ant-layout-header .user-email,
+[data-theme="dark"] .ant-layout-header .ant-typography[data-type="email"] {
+  color: #ccc !important;
+}
+
+/* Sidebar中的角色文字颜色系统 - 最高优先级 */
+/* 普通用户 - 蓝色 */
+.role-info-dark .role-text.user-role-user,
+.role-info-dark .role-text[data-role="user"],
+.role-info-dark .ant-typography.role-text.user-role-user,
+.role-info-dark .ant-typography.role-text[data-role="user"] {
+  color: #4dabf7 !important;
+}
+
+/* 管理用户 - 绿色 */
+.role-info-dark .role-text.user-role-admin,
+.role-info-dark .role-text[data-role="admin"],
+.role-info-dark .ant-typography.role-text.user-role-admin,
+.role-info-dark .ant-typography.role-text[data-role="admin"] {
+  color: #6bcf7f !important;
+}
+
+/* 超级管理用户 - 红色 */
+.role-info-dark .role-text.user-role-super_admin,
+.role-info-dark .role-text[data-role="super_admin"],
+.role-info-dark .ant-typography.role-text.user-role-super_admin,
+.role-info-dark .ant-typography.role-text[data-role="super_admin"] {
+  color: #ff6b6b !important;
+}
+
+/* Sidebar中的角色图标颜色系统 - 最高优先级 */
+/* 普通用户 - 蓝色 */
+.role-info-dark .role-icon.user-role-user,
+.role-info-dark .role-icon[data-role="user"],
+.role-info-dark .anticon.role-icon.user-role-user,
+.role-info-dark .anticon.role-icon[data-role="user"] {
+  color: #4dabf7 !important;
+}
+
+/* 管理用户 - 绿色 */
+.role-info-dark .role-icon.user-role-admin,
+.role-info-dark .role-icon[data-role="admin"],
+.role-info-dark .anticon.role-icon.user-role-admin,
+.role-info-dark .anticon.role-icon[data-role="admin"] {
+  color: #6bcf7f !important;
+}
+
+/* 超级管理用户 - 红色 */
+.role-info-dark .role-icon.user-role-super_admin,
+.role-info-dark .role-icon[data-role="super_admin"],
+.role-info-dark .anticon.role-icon.user-role-super_admin,
+.role-info-dark .anticon.role-icon[data-role="super_admin"] {
+  color: #ff6b6b !important;
+}
+
+/* 角色描述文字 - 在深色模式下使用浅色 */
+.role-info-dark .role-description {
+  color: #ccc !important;
+}
+
+/* 深色模式下的角色特定图标颜色 - 保持角色颜色 */
+.role-info-dark .anticon-crown[style*="color: #ff4d4f"] {
+  color: #ff6b6b !important; /* 超级管理员 - 红色 */
+}
+
+.role-info-dark .anticon-crown[style*="color: #52c41a"] {
+  color: #6bcf7f !important; /* 管理员 - 绿色 */
+}
+
+.role-info-dark .anticon-user[style*="color: #1890ff"] {
+  color: #4dabf7 !important; /* 普通用户 - 蓝色 */
+}
+
+/* 深色模式下的文字颜色 - 统一使用白色（但角色文字除外） */
+.role-info-dark .ant-typography:not(.role-text)[style*="color: #ff4d4f"] {
+  color: #fff !important;
+}
+
+.role-info-dark .ant-typography:not(.role-text)[style*="color: #52c41a"] {
+  color: #fff !important;
+}
+
+.role-info-dark .ant-typography:not(.role-text)[style*="color: #1890ff"] {
+  color: #fff !important;
+}

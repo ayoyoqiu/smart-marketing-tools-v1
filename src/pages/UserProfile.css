@@ -1,0 +1,157 @@
+/* 用户资料页面样式 */
+
+/* 统计卡片样式 */
+.stats-card {
+  text-align: center;
+  padding: 24px 64px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.stats-card:hover::before {
+  left: 100%;
+}
+
+.stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* 推送任务卡片 */
+.stats-card-tasks {
+  background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+  border: 1px solid #91d5ff;
+}
+
+.stats-card-tasks:hover {
+  background: linear-gradient(135deg, #d6f0ff 0%, #e6f7ff 100%);
+  border-color: #69c0ff;
+}
+
+/* 机器人地址卡片 */
+.stats-card-addresses {
+  background: linear-gradient(135deg, #f6ffed 0%, #f0fff0 100%);
+  border: 1px solid #b7eb8f;
+}
+
+.stats-card-addresses:hover {
+  background: linear-gradient(135deg, #e6ffed 0%, #f6ffed 100%);
+  border-color: #95de64;
+}
+
+/* 历史消息卡片 */
+.stats-card-messages {
+  background: linear-gradient(135deg, #f9f0ff 0%, #f0f0ff 100%);
+  border: 1px solid #d3adf7;
+}
+
+.stats-card-messages:hover {
+  background: linear-gradient(135deg, #f0e6ff 0%, #f9f0ff 100%);
+  border-color: #b37feb;
+}
+
+/* 图标样式 */
+.stats-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .stats-icon {
+  transform: scale(1.1);
+}
+
+/* 数值样式 */
+.stats-value {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .stats-value {
+  transform: scale(1.05);
+}
+
+/* 标签样式 */
+.stats-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-card:hover .stats-label {
+  color: #333;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .stats-card {
+    padding: 20px 40px;
+    height: 120px;
+  }
+  
+  .stats-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+  
+  .stats-value {
+    font-size: 24px;
+    margin-bottom: 3px;
+  }
+  
+  .stats-label {
+    font-size: 13px;
+  }
+}
+
+/* 加载状态样式 */
+.stats-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 卡片标题样式 */
+.stats-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+/* 刷新按钮样式 */
+.stats-refresh-btn {
+  transition: all 0.3s ease;
+}
+
+.stats-refresh-btn:hover {
+  color: #1890ff;
+  background-color: rgba(24, 144, 255, 0.1);
+}

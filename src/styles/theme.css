@@ -1,0 +1,1759 @@
+/* 图片上传卡片整体高度缩放 */
+.upload-card-scale {
+  transform: scale(0.7);
+  transform-origin: top center;
+}
+
+@media (max-width: 992px) {
+  .upload-card-scale {
+    transform: none;
+  }
+}
+/* 主题色彩变量系统 */
+:root {
+  /* 浅色主题 */
+  --primary-color: #1890ff;
+  --primary-hover: #40a9ff;
+  --primary-active: #096dd9;
+  
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #ff4d4f;
+  --info-color: #1890ff;
+  
+  --background-color: #ffffff;
+  --text-color: #262626;
+  --text-secondary: #8c8c8c;
+  --text-disabled: #bfbfbf;
+  
+  --border-color: #d9d9d9;
+  --border-light: #f0f0f0;
+  
+  --card-background: #fafafa;
+  --card-border: #f0f0f0;
+  
+  --hover-color: #f5f5f5;
+  --active-color: #e6f7ff;
+  
+  --shadow-light: rgba(0, 0, 0, 0.05);
+  --shadow-medium: rgba(0, 0, 0, 0.1);
+  --shadow-heavy: rgba(0, 0, 0, 0.2);
+  
+  --overlay-color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] {
+  /* 深色主题 - 提高对比度 */
+  --primary-color: #177ddc;
+  --primary-hover: #40a9ff;
+  --primary-active: #0958b5;
+  
+  --success-color: #49aa19;
+  --warning-color: #d89614;
+  --error-color: #d32029;
+  --info-color: #177ddc;
+  
+  --background-color: #0a0a0a;
+  --text-color: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-disabled: #666666;
+  
+  --border-color: #333333;
+  --border-light: #1a1a1a;
+  
+  --card-background: #1a1a1a;
+  --card-border: #333333;
+  
+  --hover-color: #2a2a2a;
+  --active-color: #1a2a3a;
+  
+  --shadow-light: rgba(255, 255, 255, 0.08);
+  --shadow-medium: rgba(255, 255, 255, 0.15);
+  --shadow-heavy: rgba(255, 255, 255, 0.25);
+  
+  --overlay-color: rgba(0, 0, 0, 0.75);
+}
+
+/* 自定义主题色彩 */
+[data-theme="blue"] {
+  --primary-color: #1890ff;
+  --primary-hover: #40a9ff;
+  --primary-active: #096dd9;
+}
+
+[data-theme="green"] {
+  --primary-color: #52c41a;
+  --primary-hover: #73d13d;
+  --primary-active: #389e0d;
+}
+
+[data-theme="purple"] {
+  --primary-color: #722ed1;
+  --primary-hover: #9254de;
+  --primary-active: #531dab;
+}
+
+[data-theme="orange"] {
+  --primary-color: #fa8c16;
+  --primary-hover: #ffa940;
+  --primary-active: #d46b08;
+}
+
+/* 全局样式重置 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Ant Design 组件主题覆盖 */
+.ant-layout {
+  background-color: var(--background-color) !important;
+}
+
+.ant-layout-sider {
+  background-color: var(--card-background) !important;
+  border-right: 1px solid var(--border-color) !important;
+}
+
+.ant-layout-header {
+  background-color: var(--card-background) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.ant-layout-content {
+  background-color: var(--background-color) !important;
+}
+
+.ant-menu {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-menu-item {
+  color: var(--text-color) !important;
+}
+
+.ant-menu-item:hover {
+  background-color: var(--hover-color) !important;
+}
+
+.ant-menu-item-selected {
+  background-color: var(--active-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.ant-menu-submenu-title {
+  color: var(--text-color) !important;
+}
+
+.ant-card {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-card-head {
+  background-color: var(--card-background) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+.ant-card-head-title {
+  color: var(--text-color) !important;
+}
+
+.ant-card-body {
+  color: var(--text-color) !important;
+}
+
+.ant-table {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-table-thead > tr > th {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: var(--hover-color) !important;
+}
+
+.ant-table-tbody > tr {
+  background-color: var(--card-background) !important;
+}
+
+/* 深色模式下的表格内容增强对比度 */
+[data-theme="dark"] .ant-table-tbody > tr > td {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-table-thead > tr > th {
+  background-color: #1a1a1a !important;
+  border-color: #333333 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ant-table {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr {
+  background-color: #1a1a1a !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr:hover > td .ant-btn {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr:hover > td .ant-btn:hover {
+  color: #69c0ff !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr:hover > td {
+  background-color: #2a2a2a !important;
+}
+
+/* 表格中的链接按钮增强对比度 */
+[data-theme="dark"] .ant-table .ant-btn-link {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-table .ant-btn-link:hover {
+  color: #69c0ff !important;
+}
+
+[data-theme="dark"] .ant-table .ant-btn-link.danger {
+  color: #ff7875 !important;
+}
+
+[data-theme="dark"] .ant-table .ant-btn-link.danger:hover {
+  color: #ff9c9c !important;
+}
+
+/* 深色模式下的表格特殊内容增强 */
+[data-theme="dark"] .ant-table-tbody > tr > td .ant-typography {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr > td .ant-typography code {
+  background-color: #2a2a2a !important;
+  color: #e6f7ff !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr > td .ant-typography strong {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的表格状态列增强 */
+[data-theme="dark"] .ant-table .ant-tag {
+  font-weight: 500 !important;
+}
+
+/* 深色模式下的表格操作列增强 */
+[data-theme="dark"] .ant-table .ant-btn {
+  font-weight: 500 !important;
+}
+
+/* 深色模式下的表格悬停行增强 */
+[data-theme="dark"] .ant-table-tbody > tr:hover > td {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr:hover > td .ant-typography {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的表格选中行增强 */
+[data-theme="dark"] .ant-table-tbody > tr.ant-table-row-selected > td {
+  background-color: rgba(64, 169, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .ant-table-tbody > tr.ant-table-row-selected > td .ant-typography {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的表格展开行增强 */
+[data-theme="dark"] .ant-table-expanded-row {
+  background-color: #1a1a1a !important;
+}
+
+[data-theme="dark"] .ant-table-expanded-row .ant-table {
+  background-color: #1a1a1a !important;
+}
+
+/* 深色模式下的表格筛选器增强 */
+[data-theme="dark"] .ant-table-filter-dropdown {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-table-filter-dropdown .ant-dropdown-menu {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .ant-table-filter-dropdown .ant-dropdown-menu-item {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-table-filter-dropdown .ant-dropdown-menu-item:hover {
+  background-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-table-filter-dropdown .ant-dropdown-menu-item-selected {
+  background-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+.ant-input {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--primary-color) !important;
+}
+
+/* 深色模式下的输入框增强 */
+[data-theme="dark"] .ant-input {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-input::placeholder {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-input:focus,
+[data-theme="dark"] .ant-input-focused {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+/* 深色模式下的搜索框特殊优化 */
+[data-theme="dark"] .ant-input-search .ant-input {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-input-search .ant-input:hover {
+  border-color: #606060 !important;
+}
+
+[data-theme="dark"] .ant-input-search .ant-input:focus {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+[data-theme="dark"] .ant-input-search .ant-input::placeholder {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-input-search .ant-input-search-button {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-input-search .ant-input-search-button:hover {
+  background-color: #69c0ff !important;
+  border-color: #69c0ff !important;
+}
+
+/* 深色模式下的选择器 */
+[data-theme="dark"] .ant-select {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-select-selector {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-select-focused .ant-select-selector {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+[data-theme="dark"] .ant-select-arrow {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的日期选择器 */
+[data-theme="dark"] .ant-picker {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-picker-input > input {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-picker-input > input::placeholder {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的时间选择器面板增强 */
+[data-theme="dark"] .ant-picker-panel {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-picker-panel-container {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .ant-picker-header {
+  border-bottom-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-picker-header button {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-picker-header button:hover {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-picker-content th {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-picker-content td {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-picker-content td:hover {
+  background-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-picker-content td.ant-picker-cell-selected {
+  background-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-picker-content td.ant-picker-cell-today {
+  border-color: #40a9ff !important;
+}
+
+/* 深色模式下的上传组件增强 */
+[data-theme="dark"] .ant-upload {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-upload:hover {
+  border-color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-upload-list-item {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-upload-list-item:hover {
+  background-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-upload-list-item-name {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-upload-list-item-card-actions {
+  background-color: #2a2a2a !important;
+}
+
+/* 深色模式下的树形组件增强 */
+[data-theme="dark"] .ant-tree {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-tree-node-content-wrapper {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-tree-node-content-wrapper:hover {
+  background-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-tree-switcher {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的面包屑增强 */
+[data-theme="dark"] .ant-breadcrumb {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-breadcrumb a {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-breadcrumb a:hover {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-breadcrumb-separator {
+  color: #8c8c8c !important;
+}
+
+.ant-btn {
+  border-color: var(--border-color) !important;
+  transition: all 0.3s ease;
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-medium);
+}
+
+.ant-btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+
+.ant-btn-default {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+.ant-btn-default:hover {
+  background-color: var(--hover-color) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+/* 深色模式下的按钮对比度增强 */
+[data-theme="dark"] .ant-btn-default {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-btn-default:hover {
+  background-color: #404040 !important;
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-btn-text {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-btn-text:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-btn-link {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-btn-link:hover {
+  color: #69c0ff !important;
+}
+
+/* 深色模式下的按钮组件进一步优化 */
+[data-theme="dark"] .ant-btn {
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+}
+
+[data-theme="dark"] .ant-btn-primary {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ant-btn-primary:hover {
+  background-color: #69c0ff !important;
+  border-color: #69c0ff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-btn-default {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-btn-default:hover {
+  background-color: #404040 !important;
+  border-color: #606060 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-btn-text {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #40a9ff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-btn-text:hover {
+  background-color: rgba(64, 169, 255, 0.1) !important;
+  color: #69c0ff !important;
+}
+
+[data-theme="dark"] .ant-btn-link {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #40a9ff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-btn-link:hover {
+  background-color: rgba(64, 169, 255, 0.1) !important;
+  color: #69c0ff !important;
+}
+
+/* 深色模式下的其他组件样式 */
+[data-theme="dark"] .ant-alert {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .ant-alert-info {
+  background-color: rgba(24, 144, 255, 0.15) !important;
+  border-color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-alert-info .ant-alert-message {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ant-alert-info .ant-alert-description {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-alert-info .ant-alert-icon {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-alert-success {
+  background-color: rgba(82, 196, 26, 0.1) !important;
+  border-color: var(--success-color) !important;
+}
+
+[data-theme="dark"] .ant-alert-warning {
+  background-color: rgba(250, 173, 20, 0.1) !important;
+  border-color: var(--warning-color) !important;
+}
+
+[data-theme="dark"] .ant-alert-error {
+  background-color: rgba(255, 77, 79, 0.1) !important;
+  border-color: var(--error-color) !important;
+}
+
+[data-theme="dark"] .ant-divider {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .ant-typography {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .ant-typography h1,
+[data-theme="dark"] .ant-typography h2,
+[data-theme="dark"] .ant-typography h3,
+[data-theme="dark"] .ant-typography h4,
+[data-theme="dark"] .ant-typography h5,
+[data-theme="dark"] .ant-typography h6 {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的功能说明页面特殊优化 */
+[data-theme="dark"] .ant-typography.ant-typography-secondary {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-typography a {
+  color: #40a9ff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-typography a:hover {
+  color: #69c0ff !important;
+  text-decoration: underline !important;
+}
+
+/* 深色模式下的状态指示器优化 */
+[data-theme="dark"] .ant-badge .ant-badge-status-dot {
+  border-color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-badge .ant-badge-status-text {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下的状态标签优化 */
+[data-theme="dark"] .ant-tag {
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-tag-blue {
+  background-color: rgba(24, 144, 255, 0.2) !important;
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-tag-green {
+  background-color: rgba(82, 196, 26, 0.2) !important;
+  border-color: #52c41a !important;
+  color: #52c41a !important;
+}
+
+[data-theme="dark"] .ant-tag-red {
+  background-color: rgba(255, 77, 79, 0.2) !important;
+  border-color: #ff4d4f !important;
+  color: #ff4d4f !important;
+}
+
+[data-theme="dark"] .ant-tag-orange {
+  background-color: rgba(250, 173, 20, 0.2) !important;
+  border-color: #faad14 !important;
+  color: #faad14 !important;
+}
+
+/* 深色模式下的标签组件进一步优化 */
+[data-theme="dark"] .ant-tag {
+  font-weight: 600 !important;
+  border-radius: 4px !important;
+}
+
+[data-theme="dark"] .ant-tag-blue {
+  background-color: rgba(24, 144, 255, 0.25) !important;
+  border-color: #40a9ff !important;
+  color: #69c0ff !important;
+}
+
+[data-theme="dark"] .ant-tag-green {
+  background-color: rgba(82, 196, 26, 0.25) !important;
+  border-color: #52c41a !important;
+  color: #73d13d !important;
+}
+
+[data-theme="dark"] .ant-tag-red {
+  background-color: rgba(255, 77, 79, 0.25) !important;
+  border-color: #ff4d4f !important;
+  color: #ff7875 !important;
+}
+
+[data-theme="dark"] .ant-tag-orange {
+  background-color: rgba(250, 173, 20, 0.25) !important;
+  border-color: #faad14 !important;
+  color: #ffc53d !important;
+}
+
+[data-theme="dark"] .ant-tag-purple {
+  background-color: rgba(114, 46, 209, 0.25) !important;
+  border-color: #722ed1 !important;
+  color: #b37feb !important;
+}
+
+/* 深色模式下的特殊文本增强 */
+[data-theme="dark"] .ant-typography strong {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-typography code {
+  background-color: #1a1a1a !important;
+  color: #e6f7ff !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-typography mark {
+  background-color: #faad14 !important;
+  color: #000000 !important;
+}
+
+/* 深色模式下的描述文本 */
+[data-theme="dark"] .ant-descriptions-item-label {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的账户管理页面特殊优化 */
+[data-theme="dark"] .ant-page-header-heading-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ant-page-header-heading-sub-title {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-page-header-back-button {
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-page-header-back-button:hover {
+  color: #69c0ff !important;
+}
+
+/* 深色模式下的管理员展示区域优化 */
+[data-theme="dark"] .ant-layout-header .ant-typography {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-layout-header .ant-input {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-layout-header .ant-input::placeholder {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-layout-header .ant-input:focus {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+[data-theme="dark"] .ant-layout-sider .ant-input {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-layout-sider .ant-input::placeholder {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-layout-sider .ant-input:focus {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+/* 深色模式下的用户角色显示优化 */
+[data-theme="dark"] .ant-layout-header .ant-typography.ant-typography-secondary {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下的右上角角色标签优化 */
+[data-theme="dark"] .ant-layout-header .ant-card,
+[data-theme="dark"] .ant-layout-header .ant-input,
+[data-theme="dark"] .ant-layout-header .ant-select-selector,
+[data-theme="dark"] .ant-layout-header .ant-tag {
+  background-color: #000000 !important;
+  border-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-layout-header .ant-card .ant-typography,
+[data-theme="dark"] .ant-layout-header .ant-input,
+[data-theme="dark"] .ant-layout-header .ant-select-selector {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-layout-sider .ant-typography.ant-typography-secondary {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下的左侧身份背景框优化 - 移除绿色背景 */
+[data-theme="dark"] .ant-layout-sider .ant-card,
+[data-theme="dark"] .ant-layout-sider .ant-input,
+[data-theme="dark"] .ant-layout-sider .ant-select-selector {
+  background-color: #1a1a1a !important;
+  border-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+/* 深色模式下的身份显示区域特殊样式 - 移除绿色背景 */
+[data-theme="dark"] .ant-layout-sider .ant-card-body,
+[data-theme="dark"] .ant-layout-sider .ant-card-head {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* 深色模式下的侧边栏文字样式 - 但排除角色信息区域 */
+[data-theme="dark"] .ant-layout-sider .ant-typography:not(.role-text):not(.role-description) {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* 深色模式下的侧边栏次要文字样式 - 但排除角色信息区域 */
+[data-theme="dark"] .ant-layout-sider .ant-typography.ant-typography-secondary:not(.role-text):not(.role-description) {
+  background-color: transparent !important;
+  color: #e0e0e0 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-layout-sider .ant-card .ant-typography,
+[data-theme="dark"] .ant-layout-sider .ant-input,
+[data-theme="dark"] .ant-layout-sider .ant-select-selector {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-descriptions-item-content {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的统计数字 */
+[data-theme="dark"] .ant-statistic-title {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-statistic-content {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* 深色模式下的统计数字显示优化 */
+[data-theme="dark"] .ant-statistic-title {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-statistic .anticon {
+  color: #40a9ff !important;
+}
+
+/* 深色模式下的卡片统计区域优化 */
+[data-theme="dark"] .ant-card .ant-statistic-content {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-statistic-title {
+  color: #d0d0d0 !important;
+}
+
+/* 深色模式下的分组统计优化 */
+[data-theme="dark"] .ant-card .ant-typography {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-typography.ant-typography-secondary {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的步骤条 */
+[data-theme="dark"] .ant-steps-item-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-steps-item-description {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-steps-item-icon {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-steps-item-process .ant-steps-item-icon {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-steps-item-finish .ant-steps-item-icon {
+  background-color: #52c41a !important;
+  border-color: #52c41a !important;
+  color: #ffffff !important;
+}
+
+/* 深色模式下的图标颜色增强 */
+[data-theme="dark"] .anticon {
+  color: inherit !important;
+}
+
+/* 深色模式下的空状态增强 */
+[data-theme="dark"] .ant-empty-description {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-empty-img-default {
+  opacity: 0.6 !important;
+}
+
+/* 深色模式下的加载状态增强 */
+[data-theme="dark"] .ant-spin-dot-item {
+  background-color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-spin-text {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的进度条增强 */
+[data-theme="dark"] .ant-progress-text {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-progress-bg {
+  background-color: #40a9ff !important;
+}
+
+/* 深色模式下的滑块增强 */
+[data-theme="dark"] .ant-slider-rail {
+  background-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-slider-track {
+  background-color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-slider-handle {
+  border-color: #40a9ff !important;
+  background-color: #ffffff !important;
+}
+
+/* 深色模式下的开关增强 */
+[data-theme="dark"] .ant-switch {
+  background-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-switch-checked {
+  background-color: #40a9ff !important;
+}
+
+/* 深色模式下的复选框增强 */
+[data-theme="dark"] .ant-checkbox-wrapper {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+}
+
+/* 深色模式下的单选框增强 */
+[data-theme="dark"] .ant-radio-wrapper {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-radio-checked .ant-radio-inner {
+  border-color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-radio-checked .ant-radio-inner::after {
+  background-color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-tag {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* 深色模式下的标签颜色增强 */
+[data-theme="dark"] .ant-tag-blue {
+  background-color: rgba(24, 144, 255, 0.2) !important;
+  border-color: var(--primary-color) !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-tag-green {
+  background-color: rgba(82, 196, 26, 0.2) !important;
+  border-color: var(--success-color) !important;
+  color: #73d13d !important;
+}
+
+[data-theme="dark"] .ant-tag-red {
+  background-color: rgba(255, 77, 79, 0.2) !important;
+  border-color: var(--error-color) !important;
+  color: #ff7875 !important;
+}
+
+[data-theme="dark"] .ant-tag-orange {
+  background-color: rgba(250, 173, 20, 0.2) !important;
+  border-color: var(--warning-color) !important;
+  color: #ffa940 !important;
+}
+
+[data-theme="dark"] .ant-dropdown-menu {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .ant-dropdown-menu-item {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .ant-dropdown-menu-item:hover {
+  background-color: var(--hover-color) !important;
+}
+
+/* 深色模式下的下拉菜单增强 */
+[data-theme="dark"] .ant-dropdown-menu-item {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-dropdown-menu-item:hover {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .ant-dropdown-menu-item-selected {
+  background-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+/* 深色模式下的弹出层 */
+[data-theme="dark"] .ant-popover {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-popover-title {
+  color: #ffffff !important;
+  border-bottom-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-popover-inner-content {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的模态框 */
+[data-theme="dark"] .ant-modal-content {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-modal-header {
+  background-color: #2a2a2a !important;
+  border-bottom-color: #434343 !important;
+}
+
+[data-theme="dark"] .ant-modal-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal-body {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal-footer {
+  border-top-color: #434343 !important;
+}
+
+/* 深色模式下的登录页面增强 */
+[data-theme="dark"] .ant-card {
+  background-color: #1a1a1a !important;
+  border-color: #333333 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 深色模式下的登录页面特殊优化 */
+[data-theme="dark"] .ant-card .ant-typography h2 {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .ant-card .ant-typography-secondary {
+  color: #d0d0d0 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-card .ant-divider-inner-text {
+  color: #a0a0a0 !important;
+  background-color: #1a1a1a !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-card .ant-btn-default {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-btn-default:hover {
+  background-color: #404040 !important;
+  border-color: #606060 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card a {
+  color: #40a9ff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-card a:hover {
+  color: #69c0ff !important;
+  text-decoration: underline !important;
+}
+
+[data-theme="dark"] .ant-card-body {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的首页主要功能卡片文字优化 */
+[data-theme="dark"] .ant-card .ant-typography {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-typography p {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-card .ant-list-item {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-list-item .ant-typography {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-list-item .ant-typography code {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的日历组件优化 */
+[data-theme="dark"] .ant-card .ant-typography h2 {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-card .ant-tag {
+  background-color: #177ddc !important;
+  color: #ffffff !important;
+  border-color: #177ddc !important;
+}
+
+[data-theme="dark"] .ant-empty-description {
+  color: #8c8c8c !important;
+}
+
+/* 深色模式下的日历网格优化 */
+[data-theme="dark"] .calendar-day-cell {
+  background-color: #0a0a0a !important;
+  border-color: #333333 !important;
+}
+
+[data-theme="dark"] .calendar-day-cell:hover {
+  background-color: #1a1a2e !important;
+}
+
+[data-theme="dark"] .calendar-weekend {
+  background-color: #111111 !important;
+}
+
+[data-theme="dark"] .calendar-weekend:hover {
+  background-color: #1a1a2e !important;
+}
+
+[data-theme="dark"] .calendar-other-month {
+  background-color: #1a1a1a !important;
+  color: #666666 !important;
+}
+
+/* 深色模式下的任务项优化 */
+[data-theme="dark"] .calendar-task-item {
+  box-shadow: 0 1px 3px rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .calendar-task-item:hover {
+  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 深色模式下的更多指示器 */
+[data-theme="dark"] .calendar-more-indicator {
+  background-color: #333333 !important;
+  color: #999999 !important;
+}
+
+[data-theme="dark"] .calendar-more-indicator:hover {
+  background-color: #404040 !important;
+  color: #cccccc !important;
+}
+
+/* 周六特殊样式 */
+.calendar-saturday {
+  background-color: #f0f8ff !important;
+  border-right: 3px solid #1890ff !important;
+}
+
+[data-theme="dark"] .calendar-saturday {
+  background-color: #0f1a2e !important;
+  border-right: 3px solid #1890ff !important;
+}
+
+.calendar-saturday:hover {
+  background-color: #e6f7ff !important;
+}
+
+[data-theme="dark"] .calendar-saturday:hover {
+  background-color: #1a2a3e !important;
+}
+
+/* 周日特殊样式 */
+.calendar-sunday {
+  background-color: #fff5f5 !important;
+  border-right: 3px solid #ff4d4f !important;
+}
+
+[data-theme="dark"] .calendar-sunday {
+  background-color: #1a0f0f !important;
+  border-right: 3px solid #ff4d4f !important;
+}
+
+.calendar-sunday:hover {
+  background-color: #ffe6e6 !important;
+}
+
+[data-theme="dark"] .calendar-sunday:hover {
+  background-color: #2e1a1a !important;
+}
+
+[data-theme="dark"] .ant-card .ant-list-item .ant-typography strong {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* 深色模式下的标题文字增强 */
+[data-theme="dark"] .ant-typography h1,
+[data-theme="dark"] .ant-typography h2,
+[data-theme="dark"] .ant-typography h3,
+[data-theme="dark"] .ant-typography h4,
+[data-theme="dark"] .ant-typography h5,
+[data-theme="dark"] .ant-typography h6 {
+  color: #ffffff !important;
+}
+
+/* 深色模式下的次要文字增强 */
+[data-theme="dark"] .ant-typography-secondary {
+  color: #b0b0b0 !important;
+}
+
+/* 深色模式下登录页面提示文字优化 */
+[data-theme="dark"] .ant-card .ant-typography-secondary,
+[data-theme="dark"] .ant-card .ant-typography p {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下登录页面下方提示文字优化 */
+[data-theme="dark"] .ant-card .ant-typography .ant-typography-secondary {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下登录页面分割线文字优化 */
+[data-theme="dark"] .ant-card .ant-divider .ant-typography-secondary {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下的链接文字增强 */
+[data-theme="dark"] .ant-typography a {
+  color: #40a9ff !important;
+}
+
+/* 深色模式下任务模态框文字对比度优化 */
+[data-theme="dark"] .ant-modal .ant-modal-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-form-item-label > label {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-form-item-label > label .ant-form-item-required {
+  color: #ff4d4f !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-input::placeholder {
+  color: #40a9ff !important;
+  font-weight: 400 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-input-textarea::placeholder {
+  color: #40a9ff !important;
+  font-weight: 400 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-select-selection-placeholder {
+  color: #40a9ff !important;
+  font-weight: 400 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-input {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-input:focus,
+[data-theme="dark"] .ant-modal .ant-input-focused {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-input-textarea {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-select-selector {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-select-focused .ant-select-selector {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2) !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-btn {
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-btn-primary {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-btn-primary:hover {
+  background-color: #69c0ff !important;
+  border-color: #69c0ff !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-btn-default {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-btn-default:hover {
+  background-color: #404040 !important;
+  border-color: #606060 !important;
+  color: #ffffff !important;
+}
+
+/* 深色模式下字数限制提示优化 */
+[data-theme="dark"] .ant-input-data-count {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-input-data-count .ant-input-data-count-max {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="dark"] .ant-input-data-count .ant-input-data-count-current {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* 深色模式下模态框关闭按钮优化 */
+[data-theme="dark"] .ant-modal .ant-modal-close {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-modal-close:hover {
+  color: #40a9ff !important;
+  background-color: rgba(64, 169, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .ant-modal .ant-modal-close .anticon {
+  color: #ffffff !important;
+  font-size: 16px !important;
+}
+
+[data-theme="dark"] .ant-typography a:hover {
+  color: #69c0ff !important;
+}
+
+/* 深色模式下的分割线增强 */
+[data-theme="dark"] .ant-divider {
+  border-color: #404040 !important;
+}
+
+[data-theme="dark"] .ant-divider-inner-text {
+  color: #8c8c8c !important;
+  background-color: #1a1a1a !important;
+}
+
+/* 深色模式下的消息提示增强 */
+[data-theme="dark"] .ant-message-notice-content {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .ant-message-success .anticon {
+  color: #52c41a !important;
+}
+
+[data-theme="dark"] .ant-message-error .anticon {
+  color: #ff4d4f !important;
+}
+
+[data-theme="dark"] .ant-message-warning .anticon {
+  color: #faad14 !important;
+}
+
+[data-theme="dark"] .ant-message-info .anticon {
+  color: #1890ff !important;
+}
+
+[data-theme="dark"] .ant-tooltip-inner {
+  background-color: var(--card-background) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .ant-tooltip-arrow::before {
+  background-color: var(--card-background) !important;
+}
+
+/* 深色模式下的分页组件 */
+[data-theme="dark"] .ant-pagination {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-item {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-item:hover {
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-pagination-item-active {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+  color: #ffffff !important;
+}
+
+/* 深色模式下的分页组件进一步优化 */
+[data-theme="dark"] .ant-pagination {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-item {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-item:hover {
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-pagination-item-active {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+  color: #f0f0f0 !important;
+  font-weight: 600 !important;
+}
+
+/* 深色模式下的分页组件文字颜色优化 */
+[data-theme="dark"] .ant-pagination-item-active .ant-pagination-item-link {
+  color: #f0f0f0 !important;
+}
+
+[data-theme="dark"] .ant-pagination-item-active .ant-pagination-item-ellipsis {
+  color: #f0f0f0 !important;
+}
+
+[data-theme="dark"] .ant-pagination-prev,
+[data-theme="dark"] .ant-pagination-next {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-prev:hover,
+[data-theme="dark"] .ant-pagination-next:hover {
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-pagination-options .ant-select {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-options .ant-select .ant-select-selector {
+  background-color: #2a2a2a !important;
+  border-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-options .ant-select .ant-select-arrow {
+  color: #8c8c8c !important;
+}
+
+[data-theme="dark"] .ant-pagination-prev,
+[data-theme="dark"] .ant-pagination-next {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-prev:hover,
+[data-theme="dark"] .ant-pagination-next:hover {
+  border-color: #40a9ff !important;
+  color: #40a9ff !important;
+}
+
+[data-theme="dark"] .ant-pagination-options {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-pagination-options .ant-select {
+  background-color: #2a2a2a !important;
+  border-color: #434343 !important;
+  color: #ffffff !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  :root {
+    --card-padding: 12px;
+  }
+  
+  [data-theme="dark"] {
+    --card-padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --card-padding: 8px;
+  }
+  
+  [data-theme="dark"] {
+    --card-padding: 8px;
+  }
+}
+
+/* 侧边栏角色信息深色模式样式 */
+[data-theme="dark"] .role-info {
+  background-color: #1a1a1a !important;
+  border: 1px solid #333333 !important;
+}
+
+[data-theme="dark"] .role-text {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .role-description {
+  color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .role-icon {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .role-icon-super_admin {
+  color: #ff4d4f !important;
+}
+
+[data-theme="dark"] .role-icon-admin {
+  color: #52c41a !important;
+}
+
+[data-theme="dark"] .role-icon-user {
+  color: #1890ff !important;
+}
+
+/* 懒加载动画 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 卡片悬停动画 */
+.image-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.image-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* 按钮微动画 */
+.copy-button {
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  transform: scale(1.05);
+  background-color: #1890ff !important;
+  color: white !important;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .image-card {
+    margin-bottom: 16px;
+  }
+  
+  .copy-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

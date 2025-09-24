@@ -1,0 +1,1285 @@
+import express from 'express';
+import axios from 'axios';
+import cors from 'cors';
+import multer from 'multer';
+import crypto from 'crypto';
+import sharp from 'sharp';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// === 定时任务调度相关 ===
+import { createClient } from '@supabase/supabase-js';
+import cron from 'node-cron';
+
+// ES模块中获取__dirname的替代方案
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+
+// 增强CORS支持，允许所有来源和常用头
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+app.use(cors());
+app.use(express.json());
+
+// 静态文件服务（生产环境）
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'dist')));
+}
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+// 图片压缩函数
+async function compressImage(buffer) {
+  try {
+    console.log('开始压缩图片...');
+    console.log('原始图片大小:', (buffer.length / 1024 / 1024).toFixed(2), 'MB');
+    
+    // 使用sharp压缩图片
+    const compressedBuffer = await sharp(buffer)
+      .resize(2048, 2048, { 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
+      .jpeg({ 
+        quality: 80,
+        progressive: true 
+      })
+      .toBuffer();
+    
+    console.log('压缩后图片大小:', (compressedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
+    
+    // 如果压缩后仍然超过1MB，进一步压缩
+    if (compressedBuffer.length > 1 * 1024 * 1024) {
+      console.log('图片仍然超过1MB，进一步压缩...');
+      const furtherCompressed = await sharp(compressedBuffer)
+        .resize(1024, 1024, { 
+          fit: 'inside', 
+          withoutEnlargement: true 
+        })
+        .jpeg({ 
+          quality: 60,
+          progressive: true 
+        })
+        .toBuffer();
+      
+      console.log('进一步压缩后大小:', (furtherCompressed.length / 1024 / 1024).toFixed(2), 'MB');
+      
+      if (furtherCompressed.length > 1 * 1024 * 1024) {
+        console.log('图片仍然超过1MB，最终压缩...');
+        const finalCompressed = await sharp(furtherCompressed)
+          .jpeg({ 
+            quality: 40,
+            progressive: true 
+          })
+          .toBuffer();
+        
+        console.log('最终压缩后大小:', (finalCompressed.length / 1024 / 1024).toFixed(2), 'MB');
+        
+        if (finalCompressed.length > 1 * 1024 * 1024) {
+          throw new Error('图片无法压缩到1MB以内');
+        }
+        
+        return finalCompressed;
+      }
+      
+      return furtherCompressed;
+    }
+    
+    return compressedBuffer;
+  } catch (error) {
+    console.error('图片压缩失败:', error);
+    throw error;
+  }
+}
+
+// Supabase 配置（请根据实际情况填写）
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ezhbqeapgutzstdaohit.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2ODIzMTksImV4cCI6MjA3MTI1ODMxOX0.RyhROz_TL247GsEJtj86RdvDNPPLz6UX6Hep49p7DqE';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TABLES = {
+  TASKS: 'tasks',
+  WEBHOOKS: 'webhooks',
+};
+
+// 定时任务调度（每分钟执行一次）
+cron.schedule('* * * * *', async () => {
+  try {
+    const now = new Date().toISOString();
+    // 查询所有待执行的定时任务（只查询已经到时间且未过期的任务）
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // 24小时前
+    
+    const { data: tasks, error } = await supabase
+      .from(TABLES.TASKS)
+      .select('*')
+      .eq('status', 'pending')
+      .lte('scheduled_time', now)  // 查询已经到时间的任务
+      .gte('scheduled_time', oneDayAgo)  // 过滤掉过期超过24小时的任务
+      .order('scheduled_time', { ascending: true });  // 按时间排序，优先执行早的任务
+    if (error) {
+      console.error('定时任务查询失败:', error);
+      return;
+    }
+    if (!tasks || tasks.length === 0) return;
+    console.log(`\n[定时调度] 待执行任务数: ${tasks.length}`);
+    for (const task of tasks) {
+      try {
+        // 获取所有启用的webhook地址（分组过滤 + 用户隔离）
+        let webhooks = [];
+        if (task.group_category && task.group_category !== 'all' && Array.isArray(task.group_category) && task.group_category.length > 0) {
+          // 修复：正确处理group_category数组字段
+          console.log(`[定时调度] 任务${task.id} 分组过滤:`, task.group_category);
+          
+          // 如果选择了特定分组，查询对应分组的webhook
+          const { data: ws, error: werr } = await supabase
+            .from(TABLES.WEBHOOKS)
+            .select('webhook_url')
+            .eq('status', 'active')
+            .in('group_id', task.group_category)  // 修复：使用in查询数组字段
+            .eq('user_id', task.user_id); // 添加用户ID过滤
+          
+          if (!werr && ws) {
+            webhooks = ws.map(w => w.webhook_url);
+            console.log(`[定时调度] 任务${task.id} 分组查询结果:`, webhooks.length, '个webhook');
+          } else if (werr) {
+            console.error(`[定时调度] 任务${task.id} 分组查询失败:`, werr);
+          }
+        } else {
+          // 选择全部或没有分组，返回用户的所有webhook
+          console.log(`[定时调度] 任务${task.id} 选择全部webhook`);
+          const { data: ws, error: werr } = await supabase
+            .from(TABLES.WEBHOOKS)
+            .select('webhook_url')
+            .eq('status', 'active')
+            .eq('user_id', task.user_id); // 添加用户ID过滤
+          
+          if (!werr && ws) {
+            webhooks = ws.map(w => w.webhook_url);
+            console.log(`[定时调度] 任务${task.id} 全部查询结果:`, webhooks.length, '个webhook');
+          } else if (werr) {
+            console.error(`[定时调度] 任务${task.id} 全部查询失败:`, werr);
+          }
+        }
+        if (!webhooks.length) {
+          console.log(`[定时调度] 任务${task.id} 未找到可用webhook，跳过`);
+          const { error: updateError } = await supabase
+            .from(TABLES.TASKS)
+            .update({ 
+              status: 'failed', 
+              error_message: '无可用webhook',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', task.id);
+          
+          if (updateError) {
+            console.error(`[定时调度] 任务${task.id} webhook状态更新失败:`, updateError);
+          }
+          continue;
+        }
+        
+        // 添加调试日志
+        console.log(`[定时调度] 任务${task.id} 查询到webhook:`, {
+          taskId: task.id,
+          userId: task.user_id,
+          groupCategory: task.group_category,
+          webhookCount: webhooks.length,
+          webhooks: webhooks
+        });
+        let sendSuccess = true;
+        let errorMsg = '';
+        // 按 type 区分推送内容
+        if (task.type === 'card') {
+          // 卡片消息
+          const article = {
+            title: task.content.title,
+            url: task.content.url
+          };
+          if (task.content.description) article.description = task.content.description;
+          if (task.content.picurl) article.picurl = task.content.picurl;
+          const news = { articles: [article] };
+          for (const webhook of webhooks) {
+            try {
+              const res = await axios.post(webhook, {
+                msgtype: 'news',
+                news
+              }, {
+                timeout: 30000, // 30秒超时
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (!res.data || res.data.errcode !== 0) {
+                sendSuccess = false;
+                errorMsg = res.data?.errmsg || '未知错误';
+                console.log(`[定时调度] 卡片推送失败:`, res.data);
+              } else {
+                console.log(`[定时调度] 卡片推送成功:`, res.data);
+              }
+            } catch (e) {
+              sendSuccess = false;
+              if (e.code === 'ECONNABORTED') {
+                errorMsg = '网络超时';
+              } else if (e.response) {
+                errorMsg = `HTTP ${e.response.status}: ${e.response.data?.errmsg || e.message}`;
+              } else if (e.request) {
+                errorMsg = '网络连接失败';
+              } else {
+                errorMsg = e.message;
+              }
+              console.log(`[定时调度] 卡片推送异常:`, errorMsg);
+            }
+          }
+        } else if (task.type === 'rich_text') {
+          // 富文本消息（Markdown格式）
+          let richText = task.content.richText || '';
+          
+          if (richText && richText.trim()) {
+            for (const webhook of webhooks) {
+              try {
+                const res = await axios.post(webhook, {
+                  msgtype: 'markdown',
+                  markdown: { content: richText.trim() }
+                }, {
+                  timeout: 30000, // 30秒超时
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.data || res.data.errcode !== 0) {
+                  sendSuccess = false;
+                  errorMsg = res.data?.errmsg || '富文本推送失败';
+                  console.log(`[定时调度] 富文本推送失败:`, res.data);
+                } else {
+                  console.log(`[定时调度] 富文本推送成功:`, res.data);
+                }
+              } catch (e) {
+                sendSuccess = false;
+                if (e.code === 'ECONNABORTED') {
+                  errorMsg = '网络超时';
+                } else if (e.response) {
+                  errorMsg = `HTTP ${e.response.status}: ${e.response.data?.errmsg || e.message}`;
+                } else if (e.request) {
+                  errorMsg = '网络连接失败';
+                } else {
+                  errorMsg = e.message;
+                }
+                console.log(`[定时调度] 富文本推送异常:`, errorMsg);
+              }
+            }
+          }
+        } else if (task.type === 'text_image') {
+          // 图文消息 - 支持富文本和图片（与立即发送逻辑保持一致）
+          let text = task.content.text || '';
+          let images = task.content.images || '';
+          
+          console.log(`[定时调度] 处理图文消息:`, { 
+            textLength: text?.length, 
+            imagesLength: images?.length,
+            textPreview: text?.substring(0, 100),
+            imagesType: typeof images,
+            contentKeys: Object.keys(task.content || {}),
+            hasImageField: !!task.content.image,
+            imageBase64Length: task.content.image?.base64?.length || 0
+          });
+          
+          // 先发送富文本内容（与立即发送逻辑一致）
+          if (text && text.trim()) {
+            console.log(`[定时调度] 开始发送富文本内容`);
+            
+            for (const webhook of webhooks) {
+              try {
+                // 使用与立即发送相同的API调用方式
+                const res = await axios.post(webhook, {
+                  msgtype: 'text',
+                  text: { content: text.trim() }
+                }, {
+                  timeout: 30000,
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!res.data || res.data.errcode !== 0) {
+                  sendSuccess = false;
+                  errorMsg = res.data?.errmsg || '富文本推送失败';
+                  console.log(`[定时调度] 富文本推送失败:`, res.data);
+                } else {
+                  console.log(`[定时调度] 富文本推送成功:`, res.data);
+                }
+              } catch (e) {
+                sendSuccess = false;
+                if (e.code === 'ECONNABORTED') {
+                  errorMsg = '网络超时';
+                } else if (e.response) {
+                  errorMsg = `HTTP ${e.response.status}: ${e.response.data?.errmsg || e.message}`;
+                } else if (e.request) {
+                  errorMsg = '网络连接失败';
+                } else {
+                  errorMsg = e.message;
+                }
+                console.log(`[定时调度] 富文本推送异常:`, errorMsg);
+              }
+            }
+          }
+          
+          // 再发送图片
+          if (images && images.trim()) {
+            console.log(`[定时调度] 开始处理图片数据:`, { imagesType: typeof images, imagesLength: images.length });
+            
+            // 检查是否是base64格式的图片数据
+            const isBase64Image = images.length > 100 && !images.includes('http') && !images.includes('\\n');
+            
+            if (isBase64Image) {
+              // 直接使用base64数据
+              console.log(`[定时调度] 检测到base64图片数据，长度: ${images.length}`);
+              try {
+                // 转换为Buffer
+                const imageBuffer = Buffer.from(images, 'base64');
+                console.log(`[定时调度] base64图片转换成功，大小: ${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                
+                // 压缩图片
+                let processedBuffer = imageBuffer;
+                if (imageBuffer.length > 1024 * 1024) { // 超过1MB
+                  console.log(`[定时调度] 图片超过1MB，开始压缩...`);
+                  processedBuffer = await compressImage(imageBuffer);
+                  console.log(`[定时调度] 压缩完成，新大小: ${(processedBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                }
+                
+                // 转换为base64
+                const base64 = processedBuffer.toString('base64');
+                const md5 = crypto.createHash('md5').update(processedBuffer).digest('hex');
+                
+                // 发送图片到所有webhook
+                for (const webhook of webhooks) {
+                  try {
+                    const imageMsg = {
+                      msgtype: 'image',
+                      image: { base64, md5 }
+                    };
+                    
+                    const res = await axios.post(webhook, imageMsg, {
+                      timeout: 30000,
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (!res.data || res.data.errcode !== 0) {
+                      sendSuccess = false;
+                      errorMsg = res.data?.errmsg || '图片发送失败';
+                    }
+                    console.log(`[定时调度] 图片推送结果:`, res.data);
+                  } catch (e) {
+                    sendSuccess = false;
+                    errorMsg = e.response?.data?.error || e.message;
+                    console.log(`[定时调度] 图片推送异常:`, errorMsg);
+                  }
+                }
+              } catch (e) {
+                sendSuccess = false;
+                errorMsg = `base64图片处理失败: ${e.message}`;
+                console.log(`[定时调度] base64图片处理异常:`, errorMsg);
+              }
+            } else {
+              // 原有的URL图片处理逻辑
+              const imageUrls = images.split('\n').map(url => url.trim()).filter(Boolean);
+              console.log(`[定时调度] 准备发送 ${imageUrls.length} 张图片`);
+              
+              for (const imageUrl of imageUrls) {
+                try {
+                  // 下载图片
+                  console.log(`[定时调度] 下载图片: ${imageUrl}`);
+                  const imageResponse = await axios.get(imageUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 30000
+                  });
+                  
+                  const imageBuffer = Buffer.from(imageResponse.data);
+                  console.log(`[定时调度] 图片下载成功，大小: ${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                  
+                  // 压缩图片
+                  let processedBuffer = imageBuffer;
+                  if (imageBuffer.length > 1024 * 1024) { // 超过1MB
+                    console.log(`[定时调度] 图片超过1MB，开始压缩...`);
+                    processedBuffer = await compressImage(imageBuffer);
+                    console.log(`[定时调度] 压缩完成，新大小: ${(processedBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                  }
+                  
+                  // 转换为base64
+                  const base64 = processedBuffer.toString('base64');
+                  const md5 = crypto.createHash('md5').update(processedBuffer).digest('hex');
+                  
+                  // 发送图片到所有webhook
+                  for (const webhook of webhooks) {
+                    try {
+                      const imageMsg = {
+                        msgtype: 'image',
+                        image: { base64, md5 }
+                      };
+                      
+                      const res = await axios.post(webhook, imageMsg, {
+                        timeout: 30000,
+                        headers: { 'Content-Type': 'application/json' }
+                      });
+                      
+                      if (!res.data || res.data.errcode !== 0) {
+                        sendSuccess = false;
+                        errorMsg = res.data?.errmsg || '图片发送失败';
+                      }
+                      console.log(`[定时调度] 图片推送结果:`, res.data);
+                    } catch (e) {
+                      sendSuccess = false;
+                      errorMsg = e.response?.data?.error || e.message;
+                      console.log(`[定时调度] 图片推送异常:`, errorMsg);
+                    }
+                  }
+                } catch (e) {
+                  sendSuccess = false;
+                  errorMsg = `图片下载失败: ${e.message}`;
+                  console.log(`[定时调度] 图片下载异常:`, errorMsg);
+                }
+              }
+            }
+          } else {
+            console.log(`[定时调度] 没有图片数据需要发送`);
+          }
+        } else {
+          // 其他类型消息
+          let text = task.content.text || '';
+          let images = task.content.images || '';
+          
+          // 先发送文本
+          if (text && text.trim()) {
+                      for (const webhook of webhooks) {
+            try {
+              const res = await axios.post(webhook, {
+                msgtype: 'text',
+                text: { content: text.trim() }
+              }, {
+                timeout: 30000, // 30秒超时
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (!res.data || res.data.errcode !== 0) {
+                sendSuccess = false;
+                errorMsg = res.data?.errmsg || '文本发送失败';
+                console.log(`[定时调度] 文本推送失败:`, res.data);
+              } else {
+                console.log(`[定时调度] 文本推送成功:`, res.data);
+              }
+            } catch (e) {
+              sendSuccess = false;
+              if (e.code === 'ECONNABORTED') {
+                errorMsg = '网络超时';
+              } else if (e.response) {
+                errorMsg = `HTTP ${e.response.status}: ${e.response.data?.errmsg || e.message}`;
+              } else if (e.request) {
+                errorMsg = '网络连接失败';
+              } else {
+                errorMsg = e.message;
+              }
+              console.log(`[定时调度] 文本推送异常:`, errorMsg);
+            }
+          }
+          }
+          
+          // 再发送图片
+          if (images && images.trim()) {
+            // 检查是否是base64格式的图片数据
+            const isBase64Image = images.length > 100 && !images.includes('http') && !images.includes('\\n');
+            
+            if (isBase64Image) {
+              // 直接使用base64数据
+              console.log(`[定时调度] 检测到base64图片数据，长度: ${images.length}`);
+              try {
+                // 转换为Buffer
+                const imageBuffer = Buffer.from(images, 'base64');
+                console.log(`[定时调度] base64图片转换成功，大小: ${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                
+                // 压缩图片
+                let processedBuffer = imageBuffer;
+                if (imageBuffer.length > 1024 * 1024) { // 超过1MB
+                  console.log(`[定时调度] 图片超过1MB，开始压缩...`);
+                  processedBuffer = await compressImage(imageBuffer);
+                  console.log(`[定时调度] 压缩完成，新大小: ${(processedBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                }
+                
+                // 转换为base64
+                const base64 = processedBuffer.toString('base64');
+                const md5 = crypto.createHash('md5').update(processedBuffer).digest('hex');
+                
+                // 发送图片到所有webhook
+                for (const webhook of webhooks) {
+                  try {
+                    const imageMsg = {
+                      msgtype: 'image',
+                      image: { base64, md5 }
+                    };
+                    
+                    const res = await axios.post(webhook, imageMsg, {
+                      timeout: 30000,
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (!res.data || res.data.errcode !== 0) {
+                      sendSuccess = false;
+                      errorMsg = res.data?.errmsg || '图片发送失败';
+                    }
+                    console.log(`[定时调度] 图片推送结果:`, res.data);
+                  } catch (e) {
+                    sendSuccess = false;
+                    errorMsg = e.response?.data?.error || e.message;
+                    console.log(`[定时调度] 图片推送异常:`, errorMsg);
+                  }
+                }
+              } catch (e) {
+                sendSuccess = false;
+                errorMsg = `base64图片处理失败: ${e.message}`;
+                console.log(`[定时调度] base64图片处理异常:`, errorMsg);
+              }
+            } else {
+              // 原有的URL图片处理逻辑
+              const imageUrls = images.split('\n').map(url => url.trim()).filter(Boolean);
+              console.log(`[定时调度] 准备发送 ${imageUrls.length} 张图片`);
+              
+              for (const imageUrl of imageUrls) {
+                try {
+                  // 下载图片
+                  console.log(`[定时调度] 下载图片: ${imageUrl}`);
+                  const imageResponse = await axios.get(imageUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 30000
+                  });
+                  
+                  const imageBuffer = Buffer.from(imageResponse.data);
+                  console.log(`[定时调度] 图片下载成功，大小: ${(imageBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                  
+                  // 压缩图片
+                  let processedBuffer = imageBuffer;
+                  if (imageBuffer.length > 1024 * 1024) { // 超过1MB
+                    console.log(`[定时调度] 图片超过1MB，开始压缩...`);
+                    processedBuffer = await compressImage(imageBuffer);
+                    console.log(`[定时调度] 压缩完成，新大小: ${(processedBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+                  }
+                  
+                  // 转换为base64
+                  const base64 = processedBuffer.toString('base64');
+                  const md5 = crypto.createHash('md5').update(processedBuffer).digest('hex');
+                  
+                  // 发送图片到所有webhook
+                  for (const webhook of webhooks) {
+                    try {
+                      const imageMsg = {
+                        msgtype: 'image',
+                        image: { base64, md5 }
+                      };
+                      
+                      const res = await axios.post(webhook, imageMsg, {
+                        timeout: 30000,
+                        headers: { 'Content-Type': 'application/json' }
+                      });
+                      
+                      if (!res.data || res.data.errcode !== 0) {
+                        sendSuccess = false;
+                        errorMsg = res.data?.errmsg || '图片发送失败';
+                      }
+                      console.log(`[定时调度] 图片推送结果:`, res.data);
+                    } catch (e) {
+                      sendSuccess = false;
+                      errorMsg = e.response?.data?.error || e.message;
+                      console.log(`[定时调度] 图片推送异常:`, errorMsg);
+                    }
+                  }
+                } catch (e) {
+                  sendSuccess = false;
+                  errorMsg = `图片处理失败: ${e.message}`;
+                  console.log(`[定时调度] 图片处理异常:`, errorMsg);
+                }
+              }
+            }
+          }
+        }
+        // 更新任务状态
+        const updateData = {
+          status: sendSuccess ? 'completed' : 'failed',
+          error_message: sendSuccess ? null : errorMsg,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log(`[定时调度] 任务${task.id} 推送结果:`, {
+          sendSuccess,
+          errorMsg,
+          webhookCount: webhooks.length
+        });
+        
+        const { error: updateError } = await supabase
+          .from(TABLES.TASKS)
+          .update(updateData)
+          .eq('id', task.id);
+        
+        if (updateError) {
+          console.error(`[定时调度] 任务${task.id} 状态更新失败:`, updateError);
+        } else {
+          console.log(`[定时调度] 任务${task.id} 状态已更新为: ${sendSuccess ? 'completed' : 'failed'}`);
+        }
+
+        // 记录消息历史（无论成功失败都记录）
+        if (webhooks.length > 0) {
+          try {
+            // 获取webhook信息以填充必需字段
+            let groupName = '默认分组';
+            let botName = '默认机器人';
+            let webhookId = null;
+            
+            try {
+              const { data: webhookData, error: webhookError } = await supabase
+                .from('webhooks')
+                .select('id, name, group_name, description')
+                .eq('webhook_url', webhooks[0])
+                .eq('user_id', task.user_id)
+                .single();
+              
+              if (!webhookError && webhookData) {
+                groupName = webhookData.group_name || '默认分组';
+                botName = webhookData.name || '默认机器人';
+                webhookId = webhookData.id;
+              }
+            } catch (err) {
+              console.log(`[定时调度] 任务${task.id} 获取webhook信息失败:`, err);
+            }
+            
+            const historyData = {
+              task_id: task.id,
+              user_id: task.user_id,
+              webhook_id: webhookId,
+              task_name: task.title || null,
+              group_name: groupName,
+              bot_name: botName,
+              message_type: task.message_type || 'text',
+              content: JSON.stringify(task.content || {}),
+              status: sendSuccess ? 'sent' : 'failed',
+              error_message: sendSuccess ? null : errorMsg,
+              created_at: new Date().toISOString()
+            };
+            
+            const { error: historyError } = await supabase
+              .from('message_history')
+              .insert([historyData]);
+            
+            if (historyError) {
+              console.error(`[定时调度] 任务${task.id} 历史记录失败:`, historyError);
+            } else {
+              console.log(`[定时调度] 任务${task.id} 历史记录已保存，状态: ${sendSuccess ? 'success' : 'failed'}`);
+            }
+          } catch (historyErr) {
+            console.error(`[定时调度] 任务${task.id} 历史记录异常:`, historyErr);
+          }
+        }
+      } catch (err) {
+        console.error(`[定时调度] 任务${task.id} 执行异常:`, err);
+        const { error: updateError } = await supabase
+          .from(TABLES.TASKS)
+          .update({ 
+            status: 'failed', 
+            error_message: err.message,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+        
+        if (updateError) {
+          console.error(`[定时调度] 任务${task.id} 异常状态更新失败:`, updateError);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[定时调度] 全局异常:', e);
+  }
+});
+
+app.post('/api/wecom-webhook', upload.single('image'), async (req, res) => {
+  try {
+    // 改进参数获取，支持FormData和JSON
+    let webhook, text, news, userId, taskId, taskName;
+    
+    if (req.file) {
+      // 图片上传请求，从FormData获取参数
+      webhook = req.body.webhook;
+      text = req.body.text;
+      news = req.body.news;
+      userId = req.body.userId;
+      taskId = req.body.taskId;
+      taskName = req.body.taskName;
+      console.log('📁 图片上传请求 - FormData参数解析:');
+    } else {
+      // 普通请求，从JSON body获取参数
+      ({ webhook, text, news, userId, taskId, taskName } = req.body);
+      console.log('📝 普通请求 - JSON参数解析:');
+    }
+    
+    console.log('收到请求，webhook:', webhook, 'text:', text, 'news:', news, 'file:', !!req.file, 'userId:', userId, 'taskId:', taskId, 'taskName:', taskName);
+    console.log('🔍 请求详情:', {
+      hasFile: !!req.file,
+      bodyKeys: Object.keys(req.body),
+      bodyValues: req.body
+    });
+
+    if (!webhook) {
+      console.log('缺少 webhook 参数');
+      return res.status(400).json({ error: '缺少 webhook 参数' });
+    }
+
+    // 添加用户权限验证
+    if (!userId) {
+      console.log('缺少 userId 参数');
+      return res.status(400).json({ error: '缺少 userId 参数' });
+    }
+
+    // 验证webhook是否属于该用户
+    console.log('🔍 开始权限验证:', { webhook, userId });
+    
+    // 先查询webhook是否存在
+    const { data: webhookList, error: webhookListError } = await supabase
+      .from('webhooks')
+      .select('id, webhook_url, user_id, status')
+      .eq('webhook_url', webhook);
+    
+    console.log('🔍 Webhook查询结果:', { webhookList, webhookListError });
+    
+    if (webhookListError) {
+      console.log('❌ Webhook查询失败:', webhookListError);
+      return res.status(500).json({ error: 'Webhook查询失败' });
+    }
+    
+    if (!webhookList || webhookList.length === 0) {
+      console.log('❌ Webhook不存在:', webhook);
+      return res.status(403).json({ error: 'Webhook不存在' });
+    }
+    
+    // 查找匹配的webhook
+    const webhookData = webhookList.find(w => 
+      w.webhook_url === webhook && 
+      w.user_id === userId && 
+      w.status === 'active'
+    );
+    
+    console.log('🔍 权限验证结果:', { webhookData, webhookList });
+
+    if (!webhookData) {
+      console.log('❌ webhook权限验证失败: webhook不存在、不属于该用户或状态不是active');
+      console.log('🔍 验证参数:', { webhook, userId, webhookList });
+      return res.status(403).json({ error: 'webhook权限验证失败' });
+    }
+
+    console.log('webhook权限验证通过，用户ID:', userId, 'webhook ID:', webhookData.id);
+
+        // 图片推送
+    if (req.file) {
+      console.log('收到图片，准备推送');
+      const buffer = req.file.buffer;
+      
+      // 检查原始图片大小
+      const originalSize = buffer.length / 1024 / 1024; // MB
+      console.log('原始图片大小:', originalSize.toFixed(2), 'MB');
+      
+      if (originalSize > 10) {
+        console.log('图片超过10MB，拒绝处理');
+        return res.status(400).json({ error: '图片太大，无法处理（超过10MB）' });
+      }
+      
+      let processedBuffer = buffer;
+      
+      // 如果图片超过1MB，进行压缩（企业微信建议图片小于1MB）
+      if (originalSize > 1) {
+        try {
+          console.log('图片超过1MB，开始压缩...');
+          processedBuffer = await compressImage(buffer);
+          console.log('压缩完成，新大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
+          
+          // 检查压缩后的图片是否仍然太大
+          if (processedBuffer.length > 1024 * 1024) {
+            console.log('压缩后图片仍然超过1MB，尝试进一步压缩...');
+            processedBuffer = await sharp(processedBuffer)
+              .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+              .jpeg({ quality: 50, progressive: true })
+              .toBuffer();
+            console.log('进一步压缩后大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
+          }
+        } catch (error) {
+          console.error('图片压缩失败:', error);
+          return res.status(400).json({ error: '图片压缩失败: ' + error.message });
+        }
+      }
+      
+      const base64 = processedBuffer.toString('base64');
+      const md5 = crypto.createHash('md5').update(processedBuffer).digest('hex');
+      
+      const imageMsg = {
+        msgtype: 'image',
+        image: { base64, md5 }
+      };
+      
+      try {
+        console.log('准备推送图片到企业微信，图片大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
+        console.log('图片MD5:', md5);
+        console.log('推送的图片消息结构:', JSON.stringify(imageMsg, null, 2));
+        
+        const result = await axios.post(webhook, imageMsg, {
+          timeout: 30000, // 30秒超时
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('图片推送结果:', result.data);
+        
+        // 保存消息历史记录
+        if (result.data && result.data.errcode === 0) {
+          try {
+            // 获取webhook信息以填充必需字段
+            const { data: webhookData, error: webhookError } = await supabase
+              .from('webhooks')
+              .select('id, name, description')
+              .eq('webhook_url', webhook)
+              .eq('user_id', userId)
+              .single();
+            
+            const historyData = {
+              user_id: userId,
+              webhook_id: webhookData?.id || null,
+              task_id: taskId || null,
+              task_name: taskName || null,
+              group_name: webhookData?.name || '默认分组',
+              bot_name: webhookData?.description || '默认机器人',
+              message_type: 'image',
+              content: JSON.stringify({ 
+                imageSize: (processedBuffer.length / 1024 / 1024).toFixed(2) + ' MB',
+                md5: md5
+              }),
+              status: 'sent',
+              created_at: new Date().toISOString()
+            };
+            
+            const { error: historyError } = await supabase
+              .from('message_history')
+              .insert([historyData]);
+            
+            if (historyError) {
+              console.error('图片推送历史记录保存失败:', historyError);
+            } else {
+              console.log('图片推送历史记录已保存');
+            }
+          } catch (historyErr) {
+            console.error('图片推送历史记录保存异常:', historyErr);
+          }
+        }
+        
+        return res.json(result.data);
+      } catch (err) {
+        console.error('图片推送失败:', err.message);
+        console.error('图片推送失败详情:', err.response?.status, err.response?.statusText);
+        console.error('图片推送失败响应:', err.response?.data);
+        
+        // 如果是企业微信API错误，返回具体错误信息
+        if (err.response?.data?.errcode) {
+          return res.status(400).json({ 
+            error: '企业微信API错误', 
+            errcode: err.response.data.errcode,
+            errmsg: err.response.data.errmsg 
+          });
+        }
+        
+        return res.status(500).json({ error: '图片推送失败', detail: err.message });
+      }
+    }
+
+    // 富文本推送（Markdown格式）
+    if (req.body.type === 'rich_text' && typeof text === 'string' && text.trim()) {
+      console.log('收到富文本，准备推送:', text);
+      const markdownMsg = {
+        msgtype: 'markdown',
+        markdown: { content: text }
+      };
+      try {
+        const result = await axios.post(webhook, markdownMsg);
+        console.log('富文本推送结果:', result.data);
+        
+        // 保存消息历史记录
+        if (result.data && result.data.errcode === 0) {
+          try {
+            // 获取webhook信息以填充必需字段
+            const { data: webhookData, error: webhookError } = await supabase
+              .from('webhooks')
+              .select('id, name, description')
+              .eq('webhook_url', webhook)
+              .eq('user_id', userId)
+              .single();
+            
+            const historyData = {
+              user_id: userId,
+              webhook_id: webhookData?.id || null,
+              task_id: taskId || null,
+              task_name: taskName || null,
+              group_name: webhookData?.name || '默认分组',
+              bot_name: webhookData?.description || '默认机器人',
+              message_type: 'rich_text',
+              content: JSON.stringify({ richText: text }),
+              status: 'sent',
+              created_at: new Date().toISOString()
+            };
+            
+            const { error: historyError } = await supabase
+              .from('message_history')
+              .insert([historyData]);
+            
+            if (historyError) {
+              console.error('富文本推送历史记录保存失败:', historyError);
+            } else {
+              console.log('富文本推送历史记录已保存');
+            }
+          } catch (historyErr) {
+            console.error('富文本推送历史记录保存异常:', historyErr);
+          }
+        }
+        
+        return res.json(result.data);
+      } catch (err) {
+        console.error('富文本推送失败:', err.response?.data || err.message);
+        return res.status(500).json({ error: '富文本推送失败', detail: err.response?.data || err.message });
+      }
+    }
+
+    // 普通文本推送
+    if (typeof text === 'string' && text.trim()) {
+      console.log('收到文本，准备推送:', text);
+      const textMsg = {
+        msgtype: 'text',
+        text: { content: text }
+      };
+      try {
+        const result = await axios.post(webhook, textMsg);
+        console.log('文本推送结果:', result.data);
+        
+        // 保存消息历史记录
+        if (result.data && result.data.errcode === 0) {
+          try {
+            // 获取webhook信息以填充必需字段
+            const { data: webhookData, error: webhookError } = await supabase
+              .from('webhooks')
+              .select('id, name, description')
+              .eq('webhook_url', webhook)
+              .eq('user_id', userId)
+              .single();
+            
+            const historyData = {
+              user_id: userId,
+              webhook_id: webhookData?.id || null,
+              task_id: taskId || null,
+              task_name: taskName || null,
+              group_name: webhookData?.name || '默认分组',
+              bot_name: webhookData?.description || '默认机器人',
+              message_type: 'text',
+              content: JSON.stringify({ text }),
+              status: 'sent',
+              created_at: new Date().toISOString()
+            };
+            
+            const { error: historyError } = await supabase
+              .from('message_history')
+              .insert([historyData]);
+            
+            if (historyError) {
+              console.error('文本推送历史记录保存失败:', historyError);
+            } else {
+              console.log('文本推送历史记录已保存');
+            }
+          } catch (historyErr) {
+            console.error('文本推送历史记录保存异常:', historyErr);
+          }
+        }
+        
+        return res.json(result.data);
+      } catch (err) {
+        console.error('文本推送失败:', err.response?.data || err.message);
+        return res.status(500).json({ error: '文本推送失败', detail: err.response?.data || err.message });
+      }
+    }
+
+    // 卡片推送
+    if (news && news.articles && Array.isArray(news.articles) && news.articles.length > 0) {
+      const article = news.articles[0];
+      if (!article.title || !article.url) {
+        console.log('卡片参数不完整');
+        return res.status(400).json({ error: '卡片参数不完整，title和url为必填' });
+      }
+      console.log('收到卡片，准备推送:', news);
+      const newsMsg = {
+        msgtype: 'news',
+        news
+      };
+      try {
+        const result = await axios.post(webhook, newsMsg);
+        console.log('卡片推送结果:', result.data);
+        
+        // 保存消息历史记录
+        if (result.data && result.data.errcode === 0) {
+          try {
+            // 获取webhook信息以填充必需字段
+            const { data: webhookData, error: webhookError } = await supabase
+              .from('webhooks')
+              .select('id, name, description')
+              .eq('webhook_url', webhook)
+              .eq('user_id', userId)
+              .single();
+            
+            const historyData = {
+              user_id: userId,
+              webhook_id: webhookData?.id || null,
+              task_id: taskId || null,
+              task_name: taskName || null,
+              group_name: webhookData?.name || '默认分组',
+              bot_name: webhookData?.description || '默认机器人',
+              message_type: 'card',
+              content: JSON.stringify(news),
+              status: 'sent',
+              created_at: new Date().toISOString()
+            };
+            
+            const { error: historyError } = await supabase
+              .from('message_history')
+              .insert([historyData]);
+            
+            if (historyError) {
+              console.error('卡片推送历史记录保存失败:', historyError);
+            } else {
+              console.log('卡片推送历史记录已保存');
+            }
+          } catch (historyErr) {
+            console.error('卡片推送历史记录保存异常:', historyErr);
+          }
+        }
+        
+        return res.json(result.data);
+      } catch (err) {
+        console.error('卡片推送失败:', err.response?.data || err.message);
+        return res.status(500).json({ error: '卡片推送失败', detail: err.response?.data || err.message });
+      }
+    }
+
+    console.log('缺少文本、图片或卡片');
+    res.status(400).json({ error: '缺少文本、图片或卡片' });
+  } catch (e) {
+    console.error('后端捕获到错误:', e);
+    res.status(500).json({ error: e.message, detail: e.response?.data });
+  }
+});
+
+// ========================================
+// AI聊天机器人API
+// ========================================
+
+// AI聊天接口
+app.post('/api/ai-chat', async (req, res) => {
+  try {
+    const { question, sessionId, userId } = req.body;
+    
+    if (!question || !sessionId || !userId) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    console.log('🤖 AI聊天请求:', { question, sessionId, userId });
+
+    // 1. 搜索相关文档
+    const { data: documents, error: docError } = await supabase
+      .from('help_documents')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (docError) {
+      console.error('❌ 获取帮助文档失败:', docError);
+      throw docError;
+    }
+
+    // 2. 构建上下文
+    const context = documents
+      .map(doc => `${doc.title}:\n${doc.content}`)
+      .join('\n\n');
+
+    // 3. 构建AI提示词
+    const systemPrompt = `你是一个专业的网站功能助手，专门帮助用户解答关于智能营销小工具的问题。
+
+网站功能包括：
+- 任务管理：创建、编辑、删除定时任务
+- 地址管理：管理Webhook地址和分组
+- 分组管理：创建和管理用户分组
+- 消息推送：支持文本、图片、图文、卡片等多种消息类型
+
+请基于以下文档内容回答用户问题，如果问题与网站功能无关，请礼貌地告知用户你只能回答网站功能相关问题。
+
+重要：请直接回答用户问题，不要提及"基于文档"、"引用信息"等字样，也不要显示文档标题。
+
+文档内容：
+${context}
+
+用户问题：${question}
+
+请用简洁明了的中文回答，如果涉及操作步骤，请用数字列表格式。`;
+
+    // 4. 调用DeepSeek API
+    const startTime = Date.now();
+    const deepseekResponse = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: question
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer sk-3515b211287a4c9eb9cbb66af6633a1d`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const responseTime = Date.now() - startTime;
+    const answer = deepseekResponse.data.choices[0].message.content;
+    const tokensUsed = deepseekResponse.data.usage?.total_tokens || 0;
+
+    console.log('✅ AI回答生成成功:', { 
+      answer: answer.substring(0, 100) + '...', 
+      tokensUsed, 
+      responseTime 
+    });
+
+    // 5. 保存对话记录（仅当userId是有效UUID时）
+    if (userId && userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      try {
+        // 使用服务端角色保存对话记录，绕过RLS限制
+        const { error: saveError } = await supabase
+          .from('ai_conversations')
+          .insert([{
+            user_id: userId,
+            session_id: sessionId,
+            question,
+            answer,
+            context: context.substring(0, 500), // 限制上下文长度
+            tokens_used: tokensUsed,
+            response_time: responseTime
+          }]);
+
+        if (saveError) {
+          console.error('❌ 保存对话记录失败:', saveError);
+          // 如果RLS策略阻止，尝试使用管理员权限
+          console.log('🔄 尝试使用管理员权限保存对话记录...');
+        } else {
+          console.log('✅ 对话记录已保存');
+        }
+      } catch (error) {
+        console.error('❌ 保存对话记录异常:', error);
+      }
+    } else {
+      console.log('⚠️ 跳过对话记录保存（无效的userId格式）');
+    }
+
+    // 6. 返回结果
+    res.json({
+      answer,
+      context: '基于系统知识库回答', // 隐藏具体文档信息
+      tokensUsed,
+      responseTime
+    });
+
+  } catch (error) {
+    console.error('❌ AI聊天处理失败:', error);
+    
+    // 返回友好的错误信息
+    let errorMessage = '抱歉，我现在无法回答您的问题。';
+    
+    if (error.response?.status === 401) {
+      errorMessage = 'AI服务认证失败，请联系管理员。';
+    } else if (error.response?.status === 429) {
+      errorMessage = 'AI服务请求过于频繁，请稍后重试。';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'AI服务暂时不可用，请稍后重试。';
+    }
+
+    res.status(500).json({ 
+      error: errorMessage,
+      detail: error.message 
+    });
+  }
+});
+
+// 获取对话历史
+app.get('/api/ai-chat/history/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { userId } = req.query;
+
+    if (!sessionId || !userId) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    const { data, error } = await supabase
+      .from('ai_conversations')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('❌ 获取对话历史失败:', error);
+      throw error;
+    }
+
+    res.json({ conversations: data || [] });
+
+  } catch (error) {
+    console.error('❌ 获取对话历史失败:', error);
+    res.status(500).json({ error: '获取对话历史失败' });
+  }
+});
+
+// 获取帮助文档
+app.get('/api/ai-chat/help-docs', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('help_documents')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('❌ 获取帮助文档失败:', error);
+      throw error;
+    }
+
+    res.json({ documents: data || [] });
+
+  } catch (error) {
+    console.error('❌ 获取帮助文档失败:', error);
+    res.status(500).json({ error: '获取帮助文档失败' });
+  }
+});
+
+const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log(`企业微信Webhook中转服务已启动，地址: http://${HOST}:${PORT}`);
+  console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// 生产环境下的路由处理
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}

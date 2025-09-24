@@ -1,0 +1,83 @@
+{
+  "name": "smart-marketing-tools",
+  "version": "1.0.0",
+  "description": "智能营销小工具 - 消息推送与图片管理平台，支持多用户、角色管理、权限组、实时权限切换等功能",
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-modules node_modules/vite/bin/vite.js",
+    "dev:fast": "vite",
+    "dev:smart": "./scripts/start-dev.sh",
+    "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "node --experimental-modules node_modules/vite/bin/vite.js",
+    "dev:backend": "node server.js",
+    "build": "vite build",
+    "build:analyze": "vite build --mode analyze",
+    "preview": "vite preview",
+    "start": "node server.js",
+    "start:prod": "NODE_ENV=production node server.js",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext js,jsx --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,css,md}\"",
+    "test": "echo \"测试命令待配置\"",
+    "test:watch": "echo \"测试监听命令待配置\"",
+    "clean": "rm -rf dist node_modules/.vite",
+    "clean:all": "rm -rf dist node_modules package-lock.json && npm install",
+    "check:ports": "lsof -i :3000 -i :3001",
+    "health": "curl -s http://localhost:3001/ || echo \"后端服务未运行\"",
+    "postinstall": "echo \"✅ 依赖安装完成！使用 npm run dev 启动开发服务器\""
+  },
+  "dependencies": {
+    "@ant-design/charts": "^2.6.4",
+    "@ant-design/icons": "^5.2.6",
+    "@ant-design/plots": "^2.6.4",
+    "@supabase/storage-js": "^2.12.1",
+    "@supabase/supabase-js": "^2.38.4",
+    "antd": "^5.12.8",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
+    "express": "^4.18.2",
+    "form-data": "^4.0.4",
+    "moment": "^2.30.1",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^4.2.1",
+    "react": "^18.2.0",
+    "react-big-calendar": "^1.19.4",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^6.8.1",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@types/multer": "^2.0.0",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "prettier": "^3.6.2",
+    "terser": "^5.43.1",
+    "vite": "^5.0.8"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
