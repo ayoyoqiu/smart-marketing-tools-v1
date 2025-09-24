@@ -175,7 +175,7 @@ const Register = () => {
 
         <div style={{ marginTop: '24px', textAlign: 'center' }}>
           <Text type="secondary" style={{ fontSize: '12px' }}>
-            智能营销小工具 v2.0 - 多用户版本
+            智能营销小工具 v1.0 - 多用户版本
           </Text>
         </div>
       </Card>

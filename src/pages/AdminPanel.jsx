@@ -253,7 +253,7 @@ const AdminPanel = () => {
         <Row gutter={16}>
           <Col span={8}>
             <Text strong>系统版本：</Text>
-            <Text>v2.0.0 多用户版本</Text>
+            <Text>v1.0 多用户版本</Text>
           </Col>
           <Col span={8}>
             <Text strong>当前时间：</Text>
