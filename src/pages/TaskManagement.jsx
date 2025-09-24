@@ -1513,8 +1513,7 @@ const TaskManagement = () => {
       title: '任务ID',
       dataIndex: 'id',
       key: 'id',
-      width: 160,
-      fixed: 'left',
+      width: 120,
       render: (id) => id ? <span style={{ fontSize: 12, color: '#888' }}>{id.slice(0, 8)}...</span> : '-' 
     },
     {
@@ -1599,7 +1598,6 @@ const TaskManagement = () => {
       title: '操作',
       key: 'action',
       width: 200,
-      fixed: 'right',
       render: (_, record) => (
         <Space size="small" wrap>
           <Button
@@ -1731,8 +1729,9 @@ const TaskManagement = () => {
           rowKey="id"
           loading={loading}
           pagination={false}
-          scroll={{ x: 1200, y: 600 }}
+          scroll={{ x: 'max-content' }}
           size="small"
+          tableLayout="fixed"
           locale={{
             emptyText: loading ? (
               <div style={{ padding: '40px 0' }}>
