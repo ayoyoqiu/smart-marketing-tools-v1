@@ -1520,6 +1520,7 @@ const TaskManagement = () => {
       title: '任务名称',
       dataIndex: 'title',
       key: 'title',
+      width: 260,
       ellipsis: { showTitle: false },
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
@@ -1596,9 +1597,9 @@ const TaskManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 240,
       render: (_, record) => (
-        <Space size="small" wrap>
+        <Space size="small" wrap={false} style={{ whiteSpace: 'nowrap' }}>
           <Button
             type="primary"
             icon={<SendOutlined />}
