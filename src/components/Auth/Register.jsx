@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Space, Divider } from 'antd';
+import { Form, Input, Button, Card, Typography, Space, Divider, message } from 'antd';
 import { UserOutlined, LockOutlined, UserAddOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -18,7 +18,9 @@ const Register = () => {
       const email = values.email && values.email.trim() ? values.email.trim() : null;
       const success = await register(values.nickname, values.password, email);
       if (success) {
-        navigate('/login');
+        message.success('注册成功！已自动登录，正在跳转到首页...');
+        // 注册成功后直接跳转到首页，因为已经自动登录了
+        navigate('/');
       }
     } finally {
       setLoading(false);
