@@ -201,10 +201,11 @@ export const AuthProvider = ({ children }) => {
         return false;
       }
 
-      // 检查密码（支持明文和哈希两种方式）
+      // 检查密码（支持明文和base64编码两种方式）
       const user = users[0];
       const isPasswordValid = user.password_hash === password || 
-                             user.password_hash === btoa(password); // 简单的base64编码
+                             user.password_hash === btoa(password) ||
+                             atob(user.password_hash) === password; // 支持base64解码比较
 
       if (!isPasswordValid) {
         console.log('❌ 密码错误');
@@ -294,7 +295,7 @@ export const AuthProvider = ({ children }) => {
           .insert([
             {
               nickname,
-              password_hash: password,
+              password_hash: btoa(password), // 使用base64编码存储密码
               email: email || null, // 如果用户没有提供email，设为null
               status: 'active',
               role: 'user' // 🔒 默认分配普通用户权限
