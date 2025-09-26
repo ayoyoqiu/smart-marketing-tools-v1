@@ -301,82 +301,55 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 注册函数 - 简化版本，默认分配普通权限
+  // 注册函数 - 简化版本，直接创建用户记录
   const register = async (nickname, password, email = null) => {
     try {
       console.log('🔍 开始注册用户:', { nickname, email: email || '未提供' });
       
-      // 生成临时邮箱，使用gmail.com域名
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const tempEmail = email || `user_${randomId}@gmail.com`;
-      
-      // 使用Supabase Auth注册
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: tempEmail,
-        password: password,
-        options: {
-          data: {
-            nickname: nickname,
-            role: 'user'
+      // 直接创建用户记录 - 默认分配普通用户权限
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert([
+          {
+            nickname,
+            password_hash: btoa(password), // 使用base64编码存储密码
+            email: email || null, // 如果用户没有提供email，设为null
+            status: 'active',
+            role: 'user' // 🔒 默认分配普通用户权限
           }
-        }
-      });
+        ])
+        .select()
+        .single();
 
-      if (authError) {
-        console.error('❌ Supabase Auth注册失败:', authError);
+      if (userError) {
+        console.error('❌ 创建用户记录失败:', userError);
         return false;
       }
 
-      if (authData.user) {
-        console.log('✅ Supabase Auth注册成功，用户ID:', authData.user.id);
-        
-        // 创建用户记录 - 默认分配普通用户权限
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .insert([
-            {
-              nickname,
-              password_hash: btoa(password), // 使用base64编码存储密码
-              email: email || null, // 如果用户没有提供email，设为null
-              status: 'active',
-              role: 'user' // 🔒 默认分配普通用户权限
-            }
-          ])
-          .select()
-          .single();
-
-        if (userError) {
-          console.error('❌ 创建用户记录失败:', userError);
-          // 如果创建用户记录失败，注册失败
-          return false;
-        } else {
-          console.log('✅ 用户记录创建成功:', userData);
-          
-          // 创建用户角色记录 - 默认分配普通用户角色
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert([
-              {
-                user_id: userData.id, // 使用新创建的用户记录ID
-                role: 'user', // 🔒 默认分配普通用户角色
-                is_active: true
-              }
-            ]);
-
-          if (roleError) {
-            console.error('❌ 创建用户角色失败:', roleError);
-            // 角色创建失败不影响登录，继续执行
-          } else {
-            console.log('✅ 用户角色创建成功，默认权限: user');
-          }
-
-          // 自动登录 - 使用新创建的用户记录
-          await handleUserLogin(userData);
-          return true;
-        }
-      }
+      console.log('✅ 用户记录创建成功:', userData);
       
-      return false;
+      // 创建用户角色记录 - 默认分配普通用户角色
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert([
+          {
+            user_id: userData.id, // 使用新创建的用户记录ID
+            role: 'user', // 🔒 默认分配普通用户角色
+            is_active: true
+          }
+        ]);
+
+      if (roleError) {
+        console.error('❌ 创建用户角色失败:', roleError);
+        // 角色创建失败不影响登录，继续执行
+      } else {
+        console.log('✅ 用户角色创建成功，默认权限: user');
+      }
+
+      // 自动登录 - 使用新创建的用户记录
+      await handleUserLogin(userData);
+      return true;
+      
     } catch (error) {
       console.error('❌ 注册失败:', error);
       return false;
