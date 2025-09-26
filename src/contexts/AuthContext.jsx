@@ -306,7 +306,9 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔍 开始注册用户:', { nickname, email: email || '未提供' });
       
-      const tempEmail = email || `${nickname}_${Date.now()}@example.com`;
+      // 生成临时邮箱，使用gmail.com域名
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const tempEmail = email || `user_${randomId}@gmail.com`;
       
       // 使用Supabase Auth注册
       const { data: authData, error: authError } = await supabase.auth.signUp({
