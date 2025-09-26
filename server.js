@@ -1074,6 +1074,91 @@ app.post('/api/wecom-webhook', upload.single('image'), async (req, res) => {
 });
 
 // ========================================
+// 用户注册API
+// ========================================
+
+// 用户注册API（后端绕过RLS限制）
+app.post('/api/register', async (req, res) => {
+  try {
+    const { nickname, password, email } = req.body;
+    
+    if (!nickname || !password) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    console.log('🔐 用户注册请求:', { nickname, email: email || '未提供' });
+
+    // 检查用户是否已存在
+    const { data: existingUsers, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('nickname', nickname)
+      .limit(1);
+
+    if (checkError) {
+      console.error('❌ 检查用户存在性失败:', checkError);
+      return res.status(500).json({ error: '检查用户失败' });
+    }
+
+    if (existingUsers && existingUsers.length > 0) {
+      console.log('❌ 用户已存在:', nickname);
+      return res.status(400).json({ error: '用户名已存在' });
+    }
+
+    // 创建用户记录
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .insert([
+        {
+          nickname,
+          password_hash: Buffer.from(password).toString('base64'),
+          email: email || null,
+          status: 'active',
+          role: 'user'
+        }
+      ])
+      .select()
+      .single();
+
+    if (userError) {
+      console.error('❌ 创建用户记录失败:', userError);
+      return res.status(500).json({ error: '创建用户失败' });
+    }
+
+    console.log('✅ 用户记录创建成功:', userData);
+
+    // 创建用户角色记录
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert([
+        {
+          user_id: userData.id,
+          role: 'user',
+          is_active: true
+        }
+      ]);
+
+    if (roleError) {
+      console.error('❌ 创建用户角色失败:', roleError);
+      // 角色创建失败不影响注册成功
+    } else {
+      console.log('✅ 用户角色创建成功');
+    }
+
+    console.log('✅ 用户注册成功:', nickname);
+    return res.json({ 
+      success: true, 
+      user: userData,
+      message: '注册成功' 
+    });
+
+  } catch (error) {
+    console.error('❌ 用户注册异常:', error);
+    res.status(500).json({ error: '注册失败' });
+  }
+});
+
+// ========================================
 // 密码验证API
 // ========================================
 
