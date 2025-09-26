@@ -1074,6 +1074,79 @@ app.post('/api/wecom-webhook', upload.single('image'), async (req, res) => {
 });
 
 // ========================================
+// 密码验证API
+// ========================================
+
+// 验证密码API（用于bcrypt哈希验证）
+app.post('/api/verify-password', async (req, res) => {
+  try {
+    const { nickname, password } = req.body;
+    
+    if (!nickname || !password) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    console.log('🔐 密码验证请求:', { nickname });
+
+    // 查询用户
+    const { data: users, error: queryError } = await supabase
+      .from('users')
+      .select('id, nickname, password, role, status, email, created_at')
+      .eq('nickname', nickname)
+      .eq('status', 'active')
+      .limit(1);
+
+    if (queryError) {
+      console.error('❌ 查询用户失败:', queryError);
+      return res.status(500).json({ error: '查询用户失败' });
+    }
+
+    if (!users || users.length === 0) {
+      console.log('❌ 用户不存在:', nickname);
+      return res.json({ valid: false, reason: '用户不存在' });
+    }
+
+    const user = users[0];
+    let isValid = false;
+
+    // 1. 明文密码比较
+    if (user.password === password) {
+      isValid = true;
+    }
+    // 2. base64编码密码比较
+    else if (user.password === Buffer.from(password).toString('base64')) {
+      isValid = true;
+    }
+    // 3. base64解码比较
+    else if (user.password && Buffer.from(user.password, 'base64').toString() === password) {
+      isValid = true;
+    }
+    // 4. bcrypt哈希比较
+    else if (user.password && user.password.startsWith('$2a$')) {
+      try {
+        const bcrypt = require('bcrypt');
+        isValid = await bcrypt.compare(password, user.password);
+      } catch (bcryptError) {
+        console.error('❌ bcrypt验证失败:', bcryptError);
+        isValid = false;
+      }
+    }
+
+    if (isValid) {
+      console.log('✅ 密码验证成功:', nickname);
+      return res.json({ valid: true, user });
+    } else {
+      console.log('❌ 密码验证失败:', nickname);
+      return res.json({ valid: false, reason: '密码错误' });
+    }
+
+  } catch (error) {
+    console.error('❌ 密码验证异常:', error);
+    res.status(500).json({ error: '密码验证失败' });
+  }
+});
+
+// ========================================
 // AI聊天机器人API
 // ========================================
 

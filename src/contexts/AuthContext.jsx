@@ -201,11 +201,50 @@ export const AuthProvider = ({ children }) => {
         return false;
       }
 
-      // 检查密码（支持明文和base64编码两种方式）
+      // 检查密码（支持多种格式：明文、base64编码、bcrypt哈希）
       const user = users[0];
-      const isPasswordValid = user.password === password || 
-                             user.password === btoa(password) ||
-                             atob(user.password) === password; // 支持base64解码比较
+      let isPasswordValid = false;
+      
+      // 1. 明文密码比较
+      if (user.password === password) {
+        isPasswordValid = true;
+      }
+      // 2. base64编码密码比较
+      else if (user.password === btoa(password)) {
+        isPasswordValid = true;
+      }
+      // 3. base64解码比较
+      else if (user.password && atob(user.password) === password) {
+        isPasswordValid = true;
+      }
+      // 4. bcrypt哈希比较（用于超级管理员等）
+      else if (user.password && user.password.startsWith('$2a$')) {
+        console.log('🔐 检测到bcrypt哈希密码，调用后端验证');
+        try {
+          const response = await fetch('/api/verify-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ nickname, password }),
+          });
+          
+          const result = await response.json();
+          isPasswordValid = result.valid;
+          
+          if (result.valid && result.user) {
+            // 如果后端验证成功，使用后端返回的用户数据
+            user.id = result.user.id;
+            user.role = result.user.role;
+            user.status = result.user.status;
+            user.email = result.user.email;
+            user.created_at = result.user.created_at;
+          }
+        } catch (apiError) {
+          console.error('❌ 后端密码验证失败:', apiError);
+          isPasswordValid = false;
+        }
+      }
 
       if (!isPasswordValid) {
         console.log('❌ 密码错误');
