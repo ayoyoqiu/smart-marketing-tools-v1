@@ -336,7 +336,7 @@ export const AuthProvider = ({ children }) => {
           .insert([
             {
               nickname,
-              password: btoa(password), // 使用base64编码存储密码
+              password_hash: btoa(password), // 使用base64编码存储密码
               email: email || null, // 如果用户没有提供email，设为null
               status: 'active',
               role: 'user' // 🔒 默认分配普通用户权限
