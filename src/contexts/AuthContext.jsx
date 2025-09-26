@@ -186,7 +186,7 @@ export const AuthProvider = ({ children }) => {
       // 优化查询：只选择必要字段，使用limit(1)减少数据传输
       const { data: users, error: queryError } = await supabase
         .from('users')
-        .select('id, nickname, password_hash, role, status, email, created_at')
+        .select('id, nickname, password, role, status, email, created_at')
         .eq('nickname', nickname)
         .eq('status', 'active')
         .limit(1);
@@ -203,9 +203,9 @@ export const AuthProvider = ({ children }) => {
 
       // 检查密码（支持明文和base64编码两种方式）
       const user = users[0];
-      const isPasswordValid = user.password_hash === password || 
-                             user.password_hash === btoa(password) ||
-                             atob(user.password_hash) === password; // 支持base64解码比较
+      const isPasswordValid = user.password === password || 
+                             user.password === btoa(password) ||
+                             atob(user.password) === password; // 支持base64解码比较
 
       if (!isPasswordValid) {
         console.log('❌ 密码错误');
@@ -295,7 +295,7 @@ export const AuthProvider = ({ children }) => {
           .insert([
             {
               nickname,
-              password_hash: btoa(password), // 使用base64编码存储密码
+              password: btoa(password), // 使用base64编码存储密码
               email: email || null, // 如果用户没有提供email，设为null
               status: 'active',
               role: 'user' // 🔒 默认分配普通用户权限
@@ -306,11 +306,8 @@ export const AuthProvider = ({ children }) => {
 
         if (userError) {
           console.error('❌ 创建用户记录失败:', userError);
-          // 如果创建用户记录失败，尝试使用service_role key
-          console.log('🔄 尝试使用service_role创建用户记录...');
-          
-          // 这里可以添加使用service_role的逻辑，或者直接返回成功
-          // 因为Auth用户已经创建成功
+          // 如果创建用户记录失败，注册失败
+          return false;
         } else {
           console.log('✅ 用户记录创建成功:', userData);
           
@@ -327,14 +324,15 @@ export const AuthProvider = ({ children }) => {
 
           if (roleError) {
             console.error('❌ 创建用户角色失败:', roleError);
+            // 角色创建失败不影响登录，继续执行
           } else {
             console.log('✅ 用户角色创建成功，默认权限: user');
           }
-        }
 
-        // 自动登录 - 使用新创建的用户记录
-        await handleUserLogin(userData);
-        return true;
+          // 自动登录 - 使用新创建的用户记录
+          await handleUserLogin(userData);
+          return true;
+        }
       }
       
       return false;

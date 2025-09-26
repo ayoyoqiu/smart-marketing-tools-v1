@@ -21,7 +21,12 @@ const Register = () => {
         message.success('注册成功！已自动登录，正在跳转到首页...');
         // 注册成功后直接跳转到首页，因为已经自动登录了
         navigate('/');
+      } else {
+        message.error('注册失败，请检查输入信息或稍后重试');
       }
+    } catch (error) {
+      console.error('注册异常:', error);
+      message.error('注册过程中发生错误，请稍后重试');
     } finally {
       setLoading(false);
     }
