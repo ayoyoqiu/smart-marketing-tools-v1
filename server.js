@@ -1176,7 +1176,7 @@ app.post('/api/verify-password', async (req, res) => {
     // 查询用户
     const { data: users, error: queryError } = await supabase
       .from('users')
-      .select('id, nickname, password, role, status, email, created_at')
+      .select('id, nickname, password_hash, role, status, email, created_at')
       .eq('nickname', nickname)
       .eq('status', 'active')
       .limit(1);
@@ -1195,22 +1195,22 @@ app.post('/api/verify-password', async (req, res) => {
     let isValid = false;
 
     // 1. 明文密码比较
-    if (user.password === password) {
+    if (user.password_hash === password) {
       isValid = true;
     }
     // 2. base64编码密码比较
-    else if (user.password === Buffer.from(password).toString('base64')) {
+    else if (user.password_hash === Buffer.from(password).toString('base64')) {
       isValid = true;
     }
     // 3. base64解码比较
-    else if (user.password && Buffer.from(user.password, 'base64').toString() === password) {
+    else if (user.password_hash && Buffer.from(user.password_hash, 'base64').toString() === password) {
       isValid = true;
     }
     // 4. bcrypt哈希比较
-    else if (user.password && user.password.startsWith('$2a$')) {
+    else if (user.password_hash && user.password_hash.startsWith('$2a$')) {
       try {
         const bcrypt = require('bcrypt');
-        isValid = await bcrypt.compare(password, user.password);
+        isValid = await bcrypt.compare(password, user.password_hash);
       } catch (bcryptError) {
         console.error('❌ bcrypt验证失败:', bcryptError);
         isValid = false;

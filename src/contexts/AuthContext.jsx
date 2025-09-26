@@ -186,7 +186,7 @@ export const AuthProvider = ({ children }) => {
       // 优化查询：只选择必要字段，使用limit(1)减少数据传输
       const { data: users, error: queryError } = await supabase
         .from('users')
-        .select('id, nickname, password, role, status, email, created_at')
+        .select('id, nickname, password_hash, role, status, email, created_at')
         .eq('nickname', nickname)
         .eq('status', 'active')
         .limit(1);
@@ -206,19 +206,19 @@ export const AuthProvider = ({ children }) => {
       let isPasswordValid = false;
       
       // 1. 明文密码比较
-      if (user.password === password) {
+      if (user.password_hash === password) {
         isPasswordValid = true;
       }
       // 2. base64编码密码比较
-      else if (user.password === btoa(password)) {
+      else if (user.password_hash === btoa(password)) {
         isPasswordValid = true;
       }
       // 3. base64解码比较
-      else if (user.password && atob(user.password) === password) {
+      else if (user.password_hash && atob(user.password_hash) === password) {
         isPasswordValid = true;
       }
       // 4. bcrypt哈希比较（用于超级管理员等）
-      else if (user.password && user.password.startsWith('$2a$')) {
+      else if (user.password_hash && user.password_hash.startsWith('$2a$')) {
         console.log('🔐 检测到bcrypt哈希密码，调用后端验证');
         try {
           const response = await fetch('/api/verify-password', {
