@@ -103,8 +103,10 @@ async function compressImage(buffer) {
 
 // Supabase 配置（请根据实际情况填写）
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ezhbqeapgutzstdaohit.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2ODIzMTksImV4cCI6MjA3MTI1ODMxOX0.RyhROz_TL247GsEJtj86RdvDNPPLz6UX6Hep49p7DqE';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2ODIzMTksImV4cCI6MjA3MTI1ODMxOX0.RyhROz_TL247GsEJtj86RdvDNPPLz6UX6Hep49p7DqE';
+
+// 暂时使用匿名key，但需要先禁用RLS策略
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const TABLES = {
   TASKS: 'tasks',
@@ -1089,6 +1091,7 @@ app.post('/api/register', async (req, res) => {
     console.log('🔐 用户注册请求:', { nickname, email: email || '未提供' });
 
     // 检查用户是否已存在
+    console.log('🔍 检查用户是否存在:', nickname);
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
@@ -1097,8 +1100,10 @@ app.post('/api/register', async (req, res) => {
 
     if (checkError) {
       console.error('❌ 检查用户存在性失败:', checkError);
-      return res.status(500).json({ error: '检查用户失败' });
+      return res.status(500).json({ error: '检查用户失败', details: checkError.message });
     }
+    
+    console.log('✅ 用户存在性检查完成，结果:', existingUsers);
 
     if (existingUsers && existingUsers.length > 0) {
       console.log('❌ 用户已存在:', nickname);
