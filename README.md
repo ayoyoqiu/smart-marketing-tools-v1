@@ -259,6 +259,14 @@ npm run build
 
 ## 🎉 更新日志
 
+### v1.0-0926-hotfix-login (2025-09-26)
+- 🔒 修复登录/注册失败：统一前后端使用 `password_hash` 字段进行密码校验
+- 🔑 兼容多种密码格式：明文、Base64、bcrypt（bcrypt 通过后端 `/api/verify-password` 校验）
+- 📨 注册体验优化：邮箱改为可选，前端表单已同步调整
+- 🛠️ 新增后端接口：`POST /api/register`（用于服务器侧创建用户与分配角色）
+- 🧷 RLS 临时处理：提供 SQL 关闭 public.`users`/`user_roles` 的 RLS 以快速恢复功能；后续可在拿到 Service Role Key 后逐步恢复
+- 🧰 维护建议：为当前稳定状态创建标签 `v1.0-0926-hotfix-login`，便于回滚
+
 ### v1.0 (2025-09-24)
 - ✨ **新增图片转URL工具**：Supabase Storage存储，永久公开链接，支持批量操作
 - 🎨 **首页重构**：移除"快速开始"，并入"快捷操作"（四列栅格），统一卡片风格
