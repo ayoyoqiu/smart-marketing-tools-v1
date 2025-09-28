@@ -343,23 +343,43 @@ const AIChatBot = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: theme === 'dark' ? '#2a2a2a' : '#1890ff',
+                background: theme === 'dark' 
+                  ? 'rgba(42, 42, 42, 0.8)' 
+                  : 'rgba(24, 144, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 transition: isDragging ? 'none' : 'all 0.3s ease',
                 transform: isDragging ? 'scale(1.05)' : 'scale(1)',
                 borderRadius: '50% !important' // 强制圆形
               }}
             >
-              <img 
-                src="/images/ai-robot-icon.png" 
-                alt="AI助手" 
-                className="ai-robot-icon"
-                style={{
-                  width: 32,
-                  height: 32,
-                  objectFit: 'contain',
-                  pointerEvents: 'none' // 防止图片干扰拖拽
-                }}
-              />
+              <div style={{
+                width: 32,
+                height: 32,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(5px)',
+                WebkitBackdropFilter: 'blur(5px)',
+                borderRadius: '50%',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}>
+                <img 
+                  src="/images/ai-robot-icon.png" 
+                  alt="AI助手" 
+                  className="ai-robot-icon"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    objectFit: 'contain',
+                    pointerEvents: 'none',
+                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) brightness(1.2) contrast(1.1)'
+                  }}
+                />
+              </div>
             </Button>
           </Badge>
         </Tooltip>

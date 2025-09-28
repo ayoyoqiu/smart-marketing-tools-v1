@@ -316,6 +316,25 @@
 /* 悬浮按钮中的AI机器人图标 */
 .floating-chat-button .ai-robot-icon {
   animation: pulse 2s infinite;
+  transition: all 0.3s ease;
+}
+
+/* 悬浮按钮毛玻璃效果增强 */
+.floating-chat-button .ant-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.floating-chat-button .ant-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 @keyframes pulse {
@@ -359,27 +378,39 @@
 
 /* 深色模式下的悬浮按钮样式 */
 [data-theme="dark"] .floating-chat-button .ant-btn-primary {
-  background-color: #2a2a2a !important;
-  border-color: #404040 !important;
+  background: rgba(42, 42, 42, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 50% !important;
 }
 
 [data-theme="dark"] .floating-chat-button .ant-btn-primary:hover {
-  background-color: #404040 !important;
-  border-color: #595959 !important;
+  background: rgba(64, 64, 64, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 50% !important;
+}
+
+[data-theme="dark"] .floating-chat-button .ant-btn::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
 }
 
 /* 浅色模式下的悬浮按钮样式 */
 [data-theme="light"] .floating-chat-button .ant-btn-primary {
-  background-color: #1890ff !important;
-  border-color: #1890ff !important;
+  background: rgba(24, 144, 255, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 50% !important;
 }
 
 [data-theme="light"] .floating-chat-button .ant-btn-primary:hover {
-  background-color: #40a9ff !important;
-  border-color: #40a9ff !important;
+  background: rgba(64, 169, 255, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 50% !important;
+}
+
+[data-theme="light"] .floating-chat-button .ant-btn::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
 }
 
