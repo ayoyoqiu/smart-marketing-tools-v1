@@ -262,17 +262,27 @@ const DataDashboard = () => {
     const { count: todayActiveUsers, error: todayError } = await supabase.from('users').select('*', { count: 'exact' }).gte('last_login_at', today);
     if (todayError) throw todayError;
     
-    const { data: users, error: usersError } = await supabase.from('users').select('role, status, created_at, last_login_at, nickname').order('created_at', { ascending: false }).limit(10);
+    // 最近用户列表（仅作展示，限制10条）
+    const { data: recentUsersSource, error: usersError } = await supabase
+      .from('users')
+      .select('role, status, created_at, last_login_at, nickname')
+      .order('created_at', { ascending: false })
+      .limit(10);
     if (usersError) throw usersError;
-    
+
+    // 角色分布（需要全量统计，不能限制10条）
+    const { data: allUserRoles, error: rolesError } = await supabase
+      .from('users')
+      .select('role');
+    if (rolesError) throw rolesError;
+
     const byRole = {};
-    users?.forEach(user => {
-      const role = user.role || 'user';
-      if (!byRole[role]) { byRole[role] = 0; }
-      byRole[role]++;
+    (allUserRoles || []).forEach(u => {
+      const role = u.role || 'user';
+      byRole[role] = (byRole[role] || 0) + 1;
     });
-    
-    const recentUsers = users?.slice(0, 5) || [];
+
+    const recentUsers = recentUsersSource?.slice(0, 5) || [];
     
     return {
       total: totalUsers || 0,
