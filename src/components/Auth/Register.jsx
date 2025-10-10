@@ -14,8 +14,7 @@ const Register = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // 如果用户没有输入邮箱，传递null
-      const email = values.email && values.email.trim() ? values.email.trim() : null;
+      const email = values.email.trim();
       const success = await register(values.nickname, values.password, email);
       if (success) {
         message.success('注册成功！已自动登录，正在跳转到首页...');
@@ -106,12 +105,13 @@ const Register = () => {
           <Form.Item
             name="email"
             rules={[
+              { required: true, message: '请输入邮箱地址！' },
               { type: 'email', message: '请输入有效的邮箱地址！' }
             ]}
           >
             <Input
               prefix={<MailOutlined />}
-              placeholder="请输入邮箱地址（可选）"
+              placeholder="请输入邮箱地址（必填，用于登录与会话）"
               style={{ borderRadius: '8px' }}
             />
           </Form.Item>

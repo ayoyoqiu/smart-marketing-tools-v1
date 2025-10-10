@@ -1084,8 +1084,8 @@ app.post('/api/register', async (req, res) => {
   try {
     const { nickname, password, email } = req.body;
     
-    if (!nickname || !password) {
-      return res.status(400).json({ error: '缺少必要参数' });
+    if (!nickname || !password || !email || !String(email).trim()) {
+      return res.status(400).json({ error: '缺少必要参数：nickname、password、email 均为必填' });
     }
 
     console.log('🔐 用户注册请求:', { nickname, email: email || '未提供' });
@@ -1110,6 +1110,23 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: '用户名已存在' });
     }
 
+    // 检查邮箱唯一性
+    const { data: existingEmails, error: emailCheckError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .limit(1);
+
+    if (emailCheckError) {
+      console.error('❌ 检查邮箱唯一性失败:', emailCheckError);
+      return res.status(500).json({ error: '检查邮箱失败', details: emailCheckError.message });
+    }
+
+    if (existingEmails && existingEmails.length > 0) {
+      console.log('❌ 邮箱已被使用:', email);
+      return res.status(400).json({ error: '邮箱已被使用' });
+    }
+
     // 创建用户记录
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -1117,7 +1134,7 @@ app.post('/api/register', async (req, res) => {
         {
           nickname,
           password_hash: Buffer.from(password).toString('base64'),
-          email: email || null,
+          email: email,
           status: 'active',
           role: 'user'
         }
