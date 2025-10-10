@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Descriptions, Button, Form, Input, message, Space, Avatar, Tag, Divider } from 'antd';
-import { UserOutlined, EditOutlined, SaveOutlined, LockOutlined } from '@ant-design/icons';
+import { Card, Typography, Descriptions, Button, Form, Input, message, Space, Avatar, Tag, Divider, Alert, Modal } from 'antd';
+import { UserOutlined, EditOutlined, SaveOutlined, LockOutlined, ExclamationCircleOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
 import './UserProfile.css';
@@ -11,6 +11,8 @@ const UserProfile = () => {
   const { user, isAdmin } = useAuth();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [emailForm] = Form.useForm();
 
   const [form] = Form.useForm();
 
@@ -59,6 +61,50 @@ const UserProfile = () => {
   const handleCancel = () => {
     setEditing(false);
     form.resetFields();
+  };
+
+  // 检查用户是否有邮箱
+  const hasEmail = user?.email && user.email.trim() !== '';
+
+  // 处理邮箱修复
+  const handleEmailFix = () => {
+    setEmailModalVisible(true);
+    emailForm.setFieldsValue({
+      email: user?.email || ''
+    });
+  };
+
+  // 保存邮箱
+  const handleEmailSave = async (values) => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ email: values.email })
+        .eq('id', user.id);
+
+      if (error) {
+        message.error('邮箱更新失败，请重试');
+        return;
+      }
+
+      message.success('邮箱更新成功，请重新登录以建立安全会话');
+      setEmailModalVisible(false);
+      // 建议用户重新登录
+      Modal.confirm({
+        title: '邮箱已更新',
+        content: '为了确保功能正常使用，建议您重新登录。是否现在重新登录？',
+        onOk: () => {
+          window.location.reload();
+        }
+      });
+    } catch (error) {
+      message.error('邮箱更新失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRoleText = (role) => {
@@ -112,6 +158,36 @@ const UserProfile = () => {
 
       <div style={{ marginTop: '24px' }}>
 
+        {/* 邮箱检查警告 */}
+        {!hasEmail && (
+          <Alert
+            message="邮箱缺失警告"
+            description={
+              <div>
+                <p>您的账户缺少邮箱信息，这可能导致以下功能无法正常使用：</p>
+                <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                  <li>图片上传功能</li>
+                  <li>地址管理功能</li>
+                  <li>其他需要安全验证的功能</li>
+                </ul>
+                <p style={{ margin: '8px 0 0 0' }}>
+                  <Button 
+                    type="primary" 
+                    size="small" 
+                    icon={<MailOutlined />}
+                    onClick={handleEmailFix}
+                  >
+                    立即修复邮箱
+                  </Button>
+                </p>
+              </div>
+            }
+            type="warning"
+            showIcon
+            icon={<ExclamationCircleOutlined />}
+            style={{ marginBottom: '16px' }}
+          />
+        )}
 
         {/* 基本信息卡片 */}
         <Card title="基本信息" extra={
@@ -215,6 +291,52 @@ const UserProfile = () => {
           </div>
         </Card>
 
+        {/* 邮箱修复Modal */}
+        <Modal
+          title="修复邮箱信息"
+          open={emailModalVisible}
+          onCancel={() => setEmailModalVisible(false)}
+          footer={null}
+        >
+          <Form
+            form={emailForm}
+            layout="vertical"
+            onFinish={handleEmailSave}
+          >
+            <Form.Item
+              label="邮箱地址"
+              name="email"
+              rules={[
+                { required: true, message: '请输入邮箱地址' },
+                { type: 'email', message: '请输入有效的邮箱地址' }
+              ]}
+            >
+              <Input 
+                prefix={<MailOutlined />}
+                placeholder="请输入您的邮箱地址"
+              />
+            </Form.Item>
+            
+            <Alert
+              message="重要提示"
+              description="邮箱用于建立安全会话，修复后需要重新登录才能生效。"
+              type="info"
+              showIcon
+              style={{ marginBottom: '16px' }}
+            />
+
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit" loading={loading}>
+                  保存邮箱
+                </Button>
+                <Button onClick={() => setEmailModalVisible(false)}>
+                  取消
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
 
       </div>
     </div>

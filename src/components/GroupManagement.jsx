@@ -41,13 +41,28 @@ const GroupManagement = ({ visible, onCancel, onGroupChange }) => {
   const fetchGroups = async () => {
     setLoading(true);
     try {
-              // 从groups表获取分组信息（包括系统分组和用户分组）
-        let query = supabase
-          .from('groups')
-          .select('id, name, description, color, sort_order, user_id')
-          .or(`user_id.eq.${user?.id},user_id.is.null`)
-          .order('sort_order', { ascending: true })
-          .order('name', { ascending: true });
+      // 从groups表获取分组信息（包括系统分组和用户分组）
+      let query = supabase
+        .from('groups')
+        .select('id, name, description, color, sort_order, user_id')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+
+      // 权限控制：普通用户只能看到自己的分组和系统分组，管理员可以看到所有分组
+      if (user?.id) {
+        if (isAdmin()) {
+          // 管理员可以看到所有分组，不添加过滤条件
+          console.log('🔍 管理员模式：获取所有分组');
+        } else {
+          // 普通用户只能看到自己的分组和系统分组
+          query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+          console.log('🔍 普通用户模式：获取自己的分组和系统分组');
+        }
+      } else {
+        console.error('用户ID为空，无法查询分组');
+        setGroups([]);
+        return;
+      }
 
       if (!user?.id) {
         console.error('用户ID为空，无法查询分组');

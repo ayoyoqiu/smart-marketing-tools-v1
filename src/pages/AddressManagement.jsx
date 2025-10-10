@@ -107,11 +107,20 @@ const AddressManagement = () => {
       let query = supabase
         .from('groups')
         .select('id, name, description, color, sort_order, user_id')
-        .or(`user_id.eq.${user.id},user_id.is.null`)
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
+
+      // 权限控制：普通用户只能看到自己的分组和系统分组，管理员可以看到所有分组
+      if (isAdmin()) {
+        // 管理员可以看到所有分组，不添加过滤条件
+        console.log('🔍 管理员模式：获取所有分组');
+      } else {
+        // 普通用户只能看到自己的分组和系统分组
+        query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+        console.log('🔍 普通用户模式：获取自己的分组和系统分组');
+      }
       
-      console.log('🔍 分组查询条件:', `user_id.eq.${user.id},user_id.is.null`)
+      console.log('🔍 分组查询条件:', isAdmin() ? '所有分组' : `user_id.eq.${user.id},user_id.is.null`)
 
       const { data, error } = await query
       if (error) throw error

@@ -524,13 +524,25 @@ const TaskManagement = () => {
       // 从groups表获取分组信息，包括用户分组和系统默认分组
       console.log('🔍 构建优化分组查询...')
       const startTime = performance.now();
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('groups')
         .select('id, name, user_id')
-        .or(`user_id.eq.${user.id},user_id.is.null`) // 包含用户分组和系统默认分组
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
         .limit(50) // 限制分组数量，提升性能
+
+      // 权限控制：普通用户只能看到自己的分组和系统分组，管理员可以看到所有分组
+      if (isAdmin()) {
+        // 管理员可以看到所有分组，不添加过滤条件
+        console.log('🔍 管理员模式：获取所有分组');
+      } else {
+        // 普通用户只能看到自己的分组和系统分组
+        query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+        console.log('🔍 普通用户模式：获取自己的分组和系统分组');
+      }
+
+      const { data, error } = await query
       
       const endTime = performance.now();
       console.log(`⚡ 分组查询耗时: ${Math.round(endTime - startTime)}ms`)

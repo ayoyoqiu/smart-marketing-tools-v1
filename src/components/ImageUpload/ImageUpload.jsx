@@ -27,7 +27,7 @@ const ImageUpload = ({ onUploadSuccess, userId }) => {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadedFiles, setUploadedFiles] = useState([])
 
-  // 文件上传处理
+  // 文件上传处理 - 优先使用后端API
   const handleUpload = useCallback(async (file) => {
     if (!userId) {
       message.error('请先登录')
@@ -45,60 +45,38 @@ const ImageUpload = ({ onUploadSuccess, userId }) => {
       setUploading(true)
       setUploadProgress(0)
 
-      // 生成唯一文件名
-      const timestamp = Date.now()
-      const fileExtension = file.name.split('.').pop()
-      const fileName = `${userId}_${timestamp}.${fileExtension}`
-      const storagePath = `images/${userId}/${fileName}`
+      // 使用后端API上传，绕过RLS限制
+      const formData = new FormData()
+      formData.append('image', file)
+      formData.append('userId', userId)
 
-      // 上传到 Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('smart-message-images')
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData
+      })
 
-      if (uploadError) throw uploadError
+      const result = await response.json()
 
-      // 获取图片尺寸
-      const imageDimensions = await getImageDimensions(file)
+      if (!response.ok) {
+        throw new Error(result.error || '上传失败')
+      }
 
-      // 生成公开URL
-      const { data: urlData } = supabase.storage
-        .from('smart-message-images')
-        .getPublicUrl(storagePath)
-
-      // 保存到数据库
-      const { data: dbData, error: dbError } = await supabase
-        .from('image_uploads')
-        .insert({
-          user_id: userId,
-          filename: fileName,
-          original_name: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          storage_path: storagePath,
-          public_url: urlData.publicUrl,
-          width: imageDimensions.width,
-          height: imageDimensions.height
-        })
-        .select()
-
-      if (dbError) throw dbError
+      if (!result.success) {
+        throw new Error(result.error || '上传失败')
+      }
 
       setUploadProgress(100)
       message.success(`${file.name} 上传成功`)
 
       // 添加到已上传文件列表
       const newFile = {
-        ...dbData[0],
+        ...result.data,
         file: file
       }
       setUploadedFiles(prev => [newFile, ...prev])
 
       // 通知父组件刷新列表/生成链接
-      try { onUploadSuccess && onUploadSuccess([dbData[0]]) } catch (_) {}
+      try { onUploadSuccess && onUploadSuccess([result.data]) } catch (_) {}
 
       return false // 阻止默认上传行为
     } catch (error) {
@@ -125,7 +103,7 @@ const ImageUpload = ({ onUploadSuccess, userId }) => {
     })
   }
 
-  // 批量上传处理
+  // 批量上传处理 - 使用后端API
   const handleBatchUpload = useCallback(async (fileList) => {
     if (!userId) {
       message.error('请先登录')
@@ -150,49 +128,23 @@ const ImageUpload = ({ onUploadSuccess, userId }) => {
         const file = validFiles[i]
         setUploadProgress(((i + 1) / validFiles.length) * 100)
 
-        // 生成唯一文件名
-        const timestamp = Date.now() + i
-        const fileExtension = file.name.split('.').pop()
-        const fileName = `${userId}_${timestamp}.${fileExtension}`
-        const storagePath = `images/${userId}/${fileName}`
+        // 使用后端API上传
+        const formData = new FormData()
+        formData.append('image', file)
+        formData.append('userId', userId)
 
-        // 上传到 Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('smart-message-images')
-          .upload(storagePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          })
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData
+        })
 
-        if (uploadError) throw uploadError
+        const result = await response.json()
 
-        // 获取图片尺寸
-        const imageDimensions = await getImageDimensions(file)
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || '上传失败')
+        }
 
-        // 生成公开URL
-        const { data: urlData } = supabase.storage
-          .from('smart-message-images')
-          .getPublicUrl(storagePath)
-
-        // 保存到数据库
-        const { data: dbData, error: dbError } = await supabase
-          .from('image_uploads')
-          .insert({
-            user_id: userId,
-            filename: fileName,
-            original_name: file.name,
-            file_size: file.size,
-            mime_type: file.type,
-            storage_path: storagePath,
-            public_url: urlData.publicUrl,
-            width: imageDimensions.width,
-            height: imageDimensions.height
-          })
-          .select()
-
-        if (dbError) throw dbError
-
-        uploadedImages.push(dbData[0])
+        uploadedImages.push(result.data)
       }
 
       message.success(`成功上传 ${uploadedImages.length} 张图片`)

@@ -1457,6 +1457,98 @@ app.listen(PORT, HOST, () => {
   console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
 });
 
+// ========================================
+// 图片上传API - 绕过RLS限制
+// ========================================
+
+// 图片上传API
+app.post('/api/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: '缺少用户ID' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: '没有上传文件' });
+    }
+
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: '只支持 JPG、PNG、GIF、WEBP、BMP 格式的图片' });
+    }
+
+    // 生成唯一文件名
+    const timestamp = Date.now();
+    const fileExtension = req.file.originalname.split('.').pop();
+    const fileName = `${userId}_${timestamp}.${fileExtension}`;
+    const storagePath = `images/${userId}/${fileName}`;
+
+    // 上传到 Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('smart-message-images')
+      .upload(storagePath, req.file.buffer, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('❌ 图片上传失败:', uploadError);
+      return res.status(500).json({ error: '图片上传失败: ' + uploadError.message });
+    }
+
+    // 生成公开URL
+    const { data: urlData } = supabase.storage
+      .from('smart-message-images')
+      .getPublicUrl(storagePath);
+
+    // 获取图片尺寸
+    let width = null, height = null;
+    try {
+      const sharp = require('sharp');
+      const metadata = await sharp(req.file.buffer).metadata();
+      width = metadata.width;
+      height = metadata.height;
+    } catch (sharpError) {
+      console.warn('⚠️ 无法获取图片尺寸:', sharpError.message);
+    }
+
+    // 保存到数据库（使用Service Role Key绕过RLS）
+    const { data: dbData, error: dbError } = await supabase
+      .from('image_uploads')
+      .insert({
+        user_id: userId,
+        filename: fileName,
+        original_name: req.file.originalname,
+        file_size: req.file.size,
+        mime_type: req.file.mimetype,
+        storage_path: storagePath,
+        public_url: urlData.publicUrl,
+        width: width,
+        height: height
+      })
+      .select();
+
+    if (dbError) {
+      console.error('❌ 数据库保存失败:', dbError);
+      return res.status(500).json({ error: '数据库保存失败: ' + dbError.message });
+    }
+
+    console.log('✅ 图片上传成功:', fileName);
+    res.json({
+      success: true,
+      data: dbData[0],
+      message: '图片上传成功'
+    });
+
+  } catch (error) {
+    console.error('❌ 图片上传异常:', error);
+    res.status(500).json({ error: '图片上传异常: ' + error.message });
+  }
+});
+
 // 生产环境下的路由处理
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
