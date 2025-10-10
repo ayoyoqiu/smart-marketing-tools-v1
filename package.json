@@ -24,7 +24,7 @@
     "clean:all": "rm -rf dist node_modules package-lock.json && npm install",
     "check:ports": "lsof -i :3000 -i :3001",
     "health": "curl -s http://localhost:3001/ || echo \"后端服务未运行\"",
-    "postinstall": "echo \"✅ 依赖安装完成！使用 npm run dev 启动开发服务器\""
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.4",
