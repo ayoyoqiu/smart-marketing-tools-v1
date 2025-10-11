@@ -246,6 +246,6 @@ npm start
 
 如有问题，请参考：
 - `README.md` - 项目基本说明
-- `FIX_IMAGE_UPLOAD.md` - 图片上传问题修复
+- `docs/FIX_IMAGE_UPLOAD.md` - 图片上传问题修复
 - `docs/AI_用户帮助中心.md` - AI功能使用指南
 - `database/database_structure.md` - 数据库结构说明
