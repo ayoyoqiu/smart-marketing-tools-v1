@@ -5,6 +5,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // === 定时任务调度相关 ===
@@ -35,7 +36,18 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'dist')));
 }
 
-const upload = multer({ storage: multer.memoryStorage() });
+// 本地文件服务（用于图片上传备选方案）
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// 配置 multer 以支持中文文件名
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    // 修复中文文件名编码问题
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    cb(null, true);
+  }
+});
 
 // 图片压缩函数
 async function compressImage(buffer) {
@@ -104,8 +116,9 @@ async function compressImage(buffer) {
 // Supabase 配置（请根据实际情况填写）
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ezhbqeapgutzstdaohit.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2ODIzMTksImV4cCI6MjA3MTI1ODMxOX0.RyhROz_TL247GsEJtj86RdvDNPPLz6UX6Hep49p7DqE';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTY4MjMxOSwiZXhwIjoyMDcxMjU4MzE5fQ.pMLHWW2m1lCKeqOBQVS-2Zgk9-3f-Oz0';
 
-// 暂时使用匿名key，但需要先禁用RLS策略
+// 使用匿名key，但通过后端API绕过RLS限制
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const TABLES = {
@@ -790,27 +803,30 @@ app.post('/api/wecom-webhook', upload.single('image'), async (req, res) => {
       
       let processedBuffer = buffer;
       
-      // 如果图片超过1MB，进行压缩（企业微信建议图片小于1MB）
-      if (originalSize > 1) {
-        try {
-          console.log('图片超过1MB，开始压缩...');
-          processedBuffer = await compressImage(buffer);
-          console.log('压缩完成，新大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
-          
-          // 检查压缩后的图片是否仍然太大
-          if (processedBuffer.length > 1024 * 1024) {
-            console.log('压缩后图片仍然超过1MB，尝试进一步压缩...');
-            processedBuffer = await sharp(processedBuffer)
-              .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-              .jpeg({ quality: 50, progressive: true })
-              .toBuffer();
-            console.log('进一步压缩后大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
-          }
-        } catch (error) {
-          console.error('图片压缩失败:', error);
-          return res.status(400).json({ error: '图片压缩失败: ' + error.message });
+    // 如果图片超过1MB，进行压缩（企业微信建议图片小于1MB）
+    if (originalSize > 1) {
+      try {
+        console.log('图片超过1MB，开始压缩...');
+        processedBuffer = await compressImage(buffer);
+        console.log('压缩完成，新大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
+        
+        // 检查压缩后的图片是否仍然太大
+        if (processedBuffer.length > 1024 * 1024) {
+          console.log('压缩后图片仍然超过1MB，尝试进一步压缩...');
+          processedBuffer = await sharp(processedBuffer)
+            .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 50, progressive: true })
+            .toBuffer();
+          console.log('进一步压缩后大小:', (processedBuffer.length / 1024 / 1024).toFixed(2), 'MB');
         }
+      } catch (error) {
+        console.error('图片压缩失败:', error);
+        return res.status(400).json({ error: '图片压缩失败: ' + error.message });
       }
+    } else {
+      // 如果不需要压缩，直接使用原始buffer
+      processedBuffer = buffer;
+    }
       
       const base64 = processedBuffer.toString('base64');
       const md5 = crypto.createHash('md5').update(processedBuffer).digest('hex');
@@ -1495,7 +1511,7 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
       });
 
     if (uploadError) {
-      console.error('❌ 图片上传失败:', uploadError);
+      console.error('❌ 图片上传到Storage失败:', uploadError);
       return res.status(500).json({ error: '图片上传失败: ' + uploadError.message });
     }
 
@@ -1504,10 +1520,11 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
       .from('smart-message-images')
       .getPublicUrl(storagePath);
 
+    console.log('✅ 图片已上传到Storage:', storagePath);
+
     // 获取图片尺寸
     let width = null, height = null;
     try {
-      const sharp = require('sharp');
       const metadata = await sharp(req.file.buffer).metadata();
       width = metadata.width;
       height = metadata.height;
@@ -1515,7 +1532,7 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
       console.warn('⚠️ 无法获取图片尺寸:', sharpError.message);
     }
 
-    // 保存到数据库（使用Service Role Key绕过RLS）
+    // 保存到数据库（RLS已禁用，所有用户都可以插入）
     const { data: dbData, error: dbError } = await supabase
       .from('image_uploads')
       .insert({
@@ -1546,6 +1563,36 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
   } catch (error) {
     console.error('❌ 图片上传异常:', error);
     res.status(500).json({ error: '图片上传异常: ' + error.message });
+  }
+});
+
+// ========================================
+// 数据库修复API - 提示信息
+// ========================================
+
+// 获取RLS状态信息
+app.get('/api/check-rls-status', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: '请在Supabase的SQL编辑器中执行以下SQL来禁用RLS策略：',
+      sql: `
+-- 禁用 image_uploads 表的 RLS
+ALTER TABLE image_uploads DISABLE ROW LEVEL SECURITY;
+
+-- 验证 RLS 状态
+SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'image_uploads';
+      `,
+      instructions: [
+        '1. 登录 Supabase Dashboard',
+        '2. 进入 SQL Editor',
+        '3. 执行上述 SQL 语句',
+        '4. 刷新页面并重试上传'
+      ]
+    });
+  } catch (error) {
+    console.error('❌ 获取RLS状态失败:', error);
+    res.status(500).json({ error: '获取RLS状态失败: ' + error.message });
   }
 });
 

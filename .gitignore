@@ -51,3 +51,10 @@ coverage/
 # 备份文件
 *.bak
 *.backup
+
+# 上传文件（本地存储）
+uploads/
+
+# 测试文件
+test_*.js
+*.test.js
