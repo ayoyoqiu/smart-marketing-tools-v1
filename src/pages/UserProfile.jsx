@@ -3,6 +3,8 @@ import { Card, Typography, Descriptions, Button, Form, Input, message, Space, Av
 import { UserOutlined, EditOutlined, SaveOutlined, LockOutlined, ExclamationCircleOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
+import axios from 'axios'; // 🎭 导入axios
+import { API_ENDPOINTS } from '../../config'; // 🎭 导入API配置
 import './UserProfile.css';
 
 const { Title, Text } = Typography;
