@@ -145,26 +145,26 @@ const UserProfile = () => {
         return;
       }
 
-      // 创建升级申请
-      const { error } = await supabase
-        .from('user_upgrade_requests')
-        .insert({
-          user_id: user.id,
-          from_role: 'guest',
-          to_role: 'user',
-          request_reason: values.reason || '申请升级为普通用户，开通消息发送权限',
-          status: 'pending'
-        });
+      // 🎭 调用后端API提交升级申请
+      const response = await axios.post(
+        API_ENDPOINTS.USER_REQUEST_UPGRADE,
+        {
+          reason: values.reason || '申请升级为普通用户，开通消息发送权限'
+        },
+        {
+          headers: {
+            'x-user-id': user.id
+          }
+        }
+      );
 
-      if (error) {
-        console.error('提交升级申请失败:', error);
-        message.error('提交失败，请重试');
-        return;
+      if (response.data.success) {
+        message.success(response.data.message || '升级申请已提交，请等待管理员审核');
+        setUpgradeModalVisible(false);
+        upgradeForm.resetFields();
+      } else {
+        message.error(response.data.error || '提交失败，请重试');
       }
-
-      message.success('升级申请已提交，请等待管理员审核');
-      setUpgradeModalVisible(false);
-      upgradeForm.resetFields();
     } catch (error) {
       console.error('提交升级申请异常:', error);
       message.error('提交失败，请重试');

@@ -1524,6 +1524,85 @@ app.get('/api/ai-chat/help-docs', async (req, res) => {
 // 🎭 用户角色升级API
 // ========================================
 
+// 🎭 用户提交升级申请
+app.post('/api/user/request-upgrade', async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(401).json({ error: '未登录' });
+    }
+
+    // 获取用户当前角色
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userData) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    // 检查是否已有待审核的申请
+    const { data: existingRequests, error: checkError } = await supabase
+      .from('user_upgrade_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .limit(1);
+
+    if (checkError) {
+      console.error('❌ 检查升级申请失败:', checkError);
+      return res.status(500).json({ error: '检查申请失败' });
+    }
+
+    if (existingRequests && existingRequests.length > 0) {
+      return res.status(400).json({ error: '您已有待审核的升级申请，请等待管理员处理' });
+    }
+
+    // 确定目标角色
+    let toRole = 'user';
+    if (userData.role === 'guest') {
+      toRole = 'user';
+    } else if (userData.role === 'user') {
+      toRole = 'admin';
+    } else {
+      return res.status(400).json({ error: '当前角色不支持申请升级' });
+    }
+
+    // 插入升级申请
+    const { data: request, error: insertError } = await supabase
+      .from('user_upgrade_requests')
+      .insert({
+        user_id: userId,
+        from_role: userData.role,
+        to_role: toRole,
+        request_reason: reason || '申请升级',
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('❌ 创建升级申请失败:', insertError);
+      return res.status(500).json({ error: '提交申请失败' });
+    }
+
+    console.log(`✅ 用户${userId}提交升级申请: ${userData.role} → ${toRole}`);
+
+    res.json({
+      success: true,
+      data: request,
+      message: '升级申请已提交，请等待管理员审核'
+    });
+  } catch (error) {
+    console.error('❌ 提交升级申请异常:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 管理员批准用户升级
 app.post('/api/admin/approve-user', async (req, res) => {
   try {
