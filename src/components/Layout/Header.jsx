@@ -57,6 +57,7 @@ const Header = () => {
   // 获取角色显示名称
   const getRoleDisplayName = (role) => {
     const roleNames = {
+      'guest': '游客用户', // 🎭 新增游客角色
       'user': '普通用户',
       'admin': '管理员',
       'super_admin': '超级管理员'

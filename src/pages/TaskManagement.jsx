@@ -75,7 +75,7 @@ const { TextArea } = Input
 const { Option } = Select
 
 const TaskManagement = () => {
-  const { user, isAdmin, currentRole, availableRoles } = useAuth()
+  const { user, isAdmin, isGuest, currentRole, availableRoles } = useAuth() // 🎭 新增isGuest
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const [tasks, setTasks] = useState([])
@@ -809,6 +809,15 @@ const TaskManagement = () => {
     console.log('📝 卡片描述:', values.description);
     console.log('🔗 卡片链接:', values.url);
     console.log('🖼️ 卡片图片:', values.picurl);
+    
+    // 🎭 游客用户无法发送消息
+    if (isGuest()) {
+      message.warning({
+        content: '游客用户无法发送消息，请联系管理员升级为普通用户',
+        duration: 5
+      });
+      return;
+    }
     
     setSending(true);
     try {
@@ -2021,14 +2030,21 @@ const TaskManagement = () => {
 
           <Form.Item>
             <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={sending}
-                icon={isImmediate ? <SendOutlined /> : <ClockCircleOutlined />}
+              <Tooltip 
+                title={isGuest() ? '游客用户无法发送消息，请联系管理员升级账号' : ''}
               >
-                {isImmediate ? '立即发送' : (editingTask ? '更新任务' : '创建任务')}
-              </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={sending}
+                  disabled={isGuest()} // 🎭 游客禁用发送
+                  icon={isImmediate ? <SendOutlined /> : <ClockCircleOutlined />}
+                >
+                  {isGuest() && isImmediate ? '发送（需升级）' : 
+                   isImmediate ? '立即发送' : 
+                   (editingTask ? '更新任务' : '创建任务')}
+                </Button>
+              </Tooltip>
               <Button onClick={() => setModalVisible(false)}>
                 取消
               </Button>

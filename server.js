@@ -148,6 +148,38 @@ cron.schedule('* * * * *', async () => {
     console.log(`\n[定时调度] 待执行任务数: ${tasks.length}`);
     for (const task of tasks) {
       try {
+        // 🎭 检查任务创建者的角色，游客用户的任务不执行
+        const { data: taskUser, error: taskUserError } = await supabase
+          .from('users')
+          .select('role, nickname')
+          .eq('id', task.user_id)
+          .single();
+        
+        if (taskUserError || !taskUser) {
+          console.log(`⚠️ [定时调度] 任务${task.id} 用户验证失败，跳过执行`);
+          continue;
+        }
+        
+        if (taskUser.role === 'guest') {
+          console.log(`🚫 [定时调度] 任务${task.id} 的创建者是游客用户（${taskUser.nickname}），跳过执行`);
+          // 更新任务状态为待审核
+          const { error: updateError } = await supabase
+            .from(TABLES.TASKS)
+            .update({ 
+              status: 'failed',
+              error_message: '游客用户创建的任务需要升级为普通用户后才能执行',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', task.id);
+          
+          if (updateError) {
+            console.error(`[定时调度] 任务${task.id} 状态更新失败:`, updateError);
+          }
+          continue; // 跳过这个任务
+        }
+        
+        console.log(`✅ [定时调度] 任务${task.id} 用户角色验证通过:`, { role: taskUser.role, nickname: taskUser.nickname });
+        
         // 获取所有启用的webhook地址（分组过滤 + 用户隔离）
         let webhooks = [];
         if (task.group_category && task.group_category !== 'all' && Array.isArray(task.group_category) && task.group_category.length > 0) {
@@ -749,6 +781,29 @@ app.post('/api/wecom-webhook', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: '缺少 userId 参数' });
     }
 
+    // 🎭 检查用户角色，游客用户无法发送消息
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role, nickname')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      console.log('❌ 用户验证失败:', userError);
+      return res.status(401).json({ error: '用户验证失败' });
+    }
+    
+    console.log('🔍 用户角色检查:', { userId, role: userData.role, nickname: userData.nickname });
+    
+    if (userData.role === 'guest') {
+      console.log('🚫 游客用户尝试发送消息被拒绝:', { userId, nickname: userData.nickname });
+      return res.status(403).json({ 
+        error: '游客用户无法发送消息',
+        message: '请联系管理员升级为普通用户后再发送消息',
+        userRole: 'guest'
+      });
+    }
+
     // 验证webhook是否属于该用户
     console.log('🔍 开始权限验证:', { webhook, userId });
     
@@ -1151,8 +1206,8 @@ app.post('/api/register', async (req, res) => {
           nickname,
           password_hash: Buffer.from(password).toString('base64'),
           email: email,
-          status: 'active',
-          role: 'user'
+          status: 'active'
+          // 🎭 role字段不设置，使用数据库默认值'guest'
         }
       ])
       .select()
@@ -1171,7 +1226,7 @@ app.post('/api/register', async (req, res) => {
       .insert([
         {
           user_id: userData.id,
-          role: 'user',
+          role: userData.role || 'guest', // 🎭 使用数据库返回的角色（默认guest）
           is_active: true
         }
       ]);
@@ -1462,6 +1517,217 @@ app.get('/api/ai-chat/help-docs', async (req, res) => {
   } catch (error) {
     console.error('❌ 获取帮助文档失败:', error);
     res.status(500).json({ error: '获取帮助文档失败' });
+  }
+});
+
+// ========================================
+// 🎭 用户角色升级API
+// ========================================
+
+// 管理员批准用户升级
+app.post('/api/admin/approve-user', async (req, res) => {
+  try {
+    const { userId, newRole } = req.body;
+    const adminId = req.headers['x-user-id'];
+
+    if (!adminId) {
+      return res.status(401).json({ error: '未登录' });
+    }
+
+    if (!userId || !newRole) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    // 检查操作者是否为管理员
+    const { data: adminData, error: adminError } = await supabase
+      .from('users')
+      .select('role, nickname')
+      .eq('id', adminId)
+      .single();
+
+    if (adminError || !adminData || !['admin', 'super_admin'].includes(adminData.role)) {
+      console.log('🚫 非管理员尝试升级用户:', { adminId, role: adminData?.role });
+      return res.status(403).json({ error: '权限不足，只有管理员可以升级用户' });
+    }
+
+    // 获取被升级用户信息
+    const { data: targetUser, error: targetError } = await supabase
+      .from('users')
+      .select('role, nickname')
+      .eq('id', userId)
+      .single();
+
+    if (targetError || !targetUser) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    console.log(`✅ 管理员${adminData.nickname}批准升级用户:`, {
+      userId,
+      fromRole: targetUser.role,
+      toRole: newRole,
+      targetNickname: targetUser.nickname
+    });
+
+    // 升级用户角色
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        role: newRole,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('❌ 用户升级失败:', updateError);
+      return res.status(500).json({ error: '升级失败' });
+    }
+
+    // 记录升级历史
+    const { error: historyError } = await supabase
+      .from('user_role_upgrades')
+      .insert({
+        user_id: userId,
+        from_role: targetUser.role,
+        to_role: newRole,
+        approved_by: adminId,
+        status: 'approved',
+        reason: `管理员${adminData.nickname}批准升级`
+      });
+
+    if (historyError) {
+      console.error('⚠️ 升级历史记录失败:', historyError);
+      // 不影响主流程
+    }
+
+    // 如果有待审核的升级申请，更新状态
+    const { error: requestError } = await supabase
+      .from('user_upgrade_requests')
+      .update({
+        status: 'approved',
+        approved_by: adminId,
+        approved_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('status', 'pending');
+
+    if (requestError) {
+      console.error('⚠️ 升级申请状态更新失败:', requestError);
+      // 不影响主流程
+    }
+
+    res.json({
+      success: true,
+      message: '用户升级成功',
+      data: {
+        userId,
+        fromRole: targetUser.role,
+        toRole: newRole
+      }
+    });
+  } catch (error) {
+    console.error('❌ 用户升级异常:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 管理员拒绝用户升级
+app.post('/api/admin/reject-user', async (req, res) => {
+  try {
+    const { requestId, reason } = req.body;
+    const adminId = req.headers['x-user-id'];
+
+    if (!adminId) {
+      return res.status(401).json({ error: '未登录' });
+    }
+
+    if (!requestId) {
+      return res.status(400).json({ error: '缺少申请ID' });
+    }
+
+    // 检查操作者是否为管理员
+    const { data: adminData, error: adminError } = await supabase
+      .from('users')
+      .select('role, nickname')
+      .eq('id', adminId)
+      .single();
+
+    if (adminError || !adminData || !['admin', 'super_admin'].includes(adminData.role)) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+
+    // 更新申请状态
+    const { error: updateError } = await supabase
+      .from('user_upgrade_requests')
+      .update({
+        status: 'rejected',
+        approved_by: adminId,
+        approved_at: new Date().toISOString(),
+        rejection_reason: reason || '管理员拒绝'
+      })
+      .eq('id', requestId);
+
+    if (updateError) {
+      return res.status(500).json({ error: '操作失败' });
+    }
+
+    res.json({
+      success: true,
+      message: '已拒绝升级申请'
+    });
+  } catch (error) {
+    console.error('❌ 拒绝升级异常:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 获取待审核的用户升级申请列表
+app.get('/api/admin/pending-upgrades', async (req, res) => {
+  try {
+    const adminId = req.headers['x-user-id'];
+
+    if (!adminId) {
+      return res.status(401).json({ error: '未登录' });
+    }
+
+    // 检查操作者是否为管理员
+    const { data: adminData, error: adminError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', adminId)
+      .single();
+
+    if (adminError || !adminData || !['admin', 'super_admin'].includes(adminData.role)) {
+      return res.status(403).json({ error: '权限不足' });
+    }
+
+    // 查询待审核的申请
+    const { data: requests, error: requestError } = await supabase
+      .from('user_upgrade_requests')
+      .select(`
+        *,
+        user:user_id (
+          id,
+          nickname,
+          email,
+          role,
+          created_at
+        )
+      `)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (requestError) {
+      console.error('❌ 查询升级申请失败:', requestError);
+      return res.status(500).json({ error: '查询失败' });
+    }
+
+    res.json({
+      success: true,
+      data: requests || []
+    });
+  } catch (error) {
+    console.error('❌ 获取升级申请列表异常:', error);
+    res.status(500).json({ error: '服务器错误' });
   }
 });
 

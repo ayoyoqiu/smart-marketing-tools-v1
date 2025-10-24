@@ -22,6 +22,11 @@ export const AuthProvider = ({ children }) => {
     return currentRole === 'admin' || currentRole === 'super_admin';
   };
 
+  // 🎭 检查用户是否为游客
+  const isGuest = () => {
+    return currentRole === 'guest';
+  };
+
   // 检查用户是否有指定角色
   const hasRole = (role) => {
     return availableRoles.includes(role);
@@ -65,17 +70,25 @@ export const AuthProvider = ({ children }) => {
         console.log('✅ 从users表获取角色:', userRole);
       }
 
-      // 特殊处理：只有super_admin用户才拥有所有三种角色
-      if (allRoles.has('super_admin')) {
+      // 🎭 角色继承逻辑（新增guest处理）
+      if (allRoles.has('guest') && !allRoles.has('user') && !allRoles.has('admin') && !allRoles.has('super_admin')) {
+        // guest用户独立存在，不自动继承user权限
+        console.log('🎭 游客用户，受限模式');
+      } else if (allRoles.has('super_admin')) {
+        // super_admin自动获得所有权限
         allRoles.add('user');
         allRoles.add('admin');
         allRoles.add('super_admin');
         console.log('🚀 super_admin用户自动获得所有角色权限');
       } else if (allRoles.has('admin')) {
-        // admin用户只拥有user和admin权限
+        // admin用户拥有user和admin权限
         allRoles.add('user');
         allRoles.add('admin');
         console.log('🚀 admin用户获得user和admin权限');
+      } else if (allRoles.has('user')) {
+        // user用户只有user权限
+        allRoles.add('user');
+        console.log('✅ 普通用户权限');
       }
 
       const finalRoles = Array.from(allRoles);
@@ -143,13 +156,15 @@ export const AuthProvider = ({ children }) => {
       setAvailableRoles(roles);
 
       // 🚀 自动分配最大权限：优先使用最高级别角色
-      let maxRole = 'user';
+      let maxRole = 'guest'; // 🎭 默认为guest，确保游客用户正确显示
       if (roles.includes('super_admin')) {
         maxRole = 'super_admin';
       } else if (roles.includes('admin')) {
         maxRole = 'admin';
       } else if (roles.includes('user')) {
         maxRole = 'user';
+      } else if (roles.includes('guest')) {
+        maxRole = 'guest';
       }
       
       console.log('🚀 自动分配最大权限:', { 
@@ -325,6 +340,17 @@ export const AuthProvider = ({ children }) => {
       if (result.success && result.user) {
         console.log('✅ 用户注册成功:', result.user);
         
+        // 🎭 先设置完整的用户信息（包括昵称、邮箱等）
+        const currentTime = new Date().toISOString();
+        setUser({ 
+          ...result.user, 
+          roles: [result.user.role || 'guest'], 
+          last_login_at: currentTime 
+        });
+        
+        // 保存用户ID到本地存储
+        localStorage.setItem('currentUserId', result.user.id);
+        
         // 自动登录 - 使用后端返回的用户记录
         await handleUserLogin(result.user);
         return true;
@@ -484,6 +510,7 @@ export const AuthProvider = ({ children }) => {
     availableRoles,
     isAuthenticated: !!user,
     isAdmin,
+    isGuest, // 🎭 新增游客判断函数
     hasRole,
     switchRole,
     login,

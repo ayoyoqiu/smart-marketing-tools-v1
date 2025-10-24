@@ -100,6 +100,12 @@ const Sidebar = () => {
               icon: <UserOutlined />,
               label: '账户管理',
               onClick: () => navigate('/admin/accounts')
+            },
+            {
+              key: '/admin/upgrades',
+              icon: <UserOutlined />,
+              label: '用户升级',
+              onClick: () => navigate('/admin/upgrades')
             }
           ]
         }
@@ -121,6 +127,10 @@ const Sidebar = () => {
       // 如果是账户管理页面，选中账户管理菜单项
       if (path === '/admin/accounts') {
         return ['/admin/accounts'];
+      }
+      // 🎭 如果是用户升级页面，选中用户升级菜单项
+      if (path === '/admin/upgrades') {
+        return ['/admin/upgrades'];
       }
       // 其他管理员页面选中管理面板
       return ['/admin'];

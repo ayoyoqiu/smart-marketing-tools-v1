@@ -21,7 +21,11 @@ export const API_BASE_URL = getApiBaseUrl();
 
 // 完整的API端点
 export const API_ENDPOINTS = {
-  webhook: `${API_BASE_URL}/api/wecom-webhook`
+  webhook: `${API_BASE_URL}/api/wecom-webhook`,
+  // 🎭 用户升级管理API
+  ADMIN_APPROVE_USER: `${API_BASE_URL}/api/admin/approve-user`,
+  ADMIN_REJECT_USER: `${API_BASE_URL}/api/admin/reject-user`,
+  ADMIN_PENDING_UPGRADES: `${API_BASE_URL}/api/admin/pending-upgrades`
 };
 
 export default API_CONFIG; 

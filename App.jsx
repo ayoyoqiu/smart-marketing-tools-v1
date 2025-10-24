@@ -23,6 +23,7 @@ const Home = lazy(() => import('./src/pages/Home'));
 const UserProfile = lazy(() => import('./src/pages/UserProfile'));
 const AdminPanel = lazy(() => import('./src/pages/AdminPanel'));
 const AdminAccountManagement = lazy(() => import('./src/pages/AdminAccountManagement'));
+const UserUpgradeManagement = lazy(() => import('./src/pages/UserUpgradeManagement')); // 🎭 用户升级管理
 const ImageTools = lazy(() => import('./src/pages/ImageTools'));
 
 // 加载状态组件
@@ -208,7 +209,17 @@ function App() {
             </MainLayout>
           </AuthGuard>
         } />
-        
+
+        {/* 🎭 用户升级管理路由 */}
+        <Route path="/admin/upgrades" element={
+          <AuthGuard requireAdmin={true}>
+            <MainLayout>
+              <Suspense fallback={<LoadingSpinner />}>
+                <UserUpgradeManagement />
+              </Suspense>
+            </MainLayout>
+          </AuthGuard>
+        } />
 
 
         {/* 默认重定向 */}

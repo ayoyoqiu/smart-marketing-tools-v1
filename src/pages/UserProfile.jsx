@@ -8,11 +8,13 @@ import './UserProfile.css';
 const { Title, Text } = Typography;
 
 const UserProfile = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isGuest, currentRole } = useAuth(); // 🎭 新增isGuest
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false); // 🎭 升级申请模态框
   const [emailForm] = Form.useForm();
+  const [upgradeForm] = Form.useForm(); // 🎭 升级申请表单
 
   const [form] = Form.useForm();
 
@@ -107,8 +109,73 @@ const UserProfile = () => {
     }
   };
 
+  // 🎭 处理升级申请
+  const handleUpgradeRequest = () => {
+    setUpgradeModalVisible(true);
+    upgradeForm.setFieldsValue({
+      currentRole: 'guest',
+      targetRole: 'user',
+      reason: ''
+    });
+  };
+
+  // 🎭 提交升级申请
+  const handleUpgradeSubmit = async (values) => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      // 检查是否已有待审核的申请
+      const { data: existingRequests, error: checkError } = await supabase
+        .from('user_upgrade_requests')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .limit(1);
+
+      if (checkError) {
+        console.error('检查升级申请失败:', checkError);
+        message.error('提交失败，请重试');
+        return;
+      }
+
+      if (existingRequests && existingRequests.length > 0) {
+        message.warning('您已有待审核的升级申请，请等待管理员处理');
+        setUpgradeModalVisible(false);
+        return;
+      }
+
+      // 创建升级申请
+      const { error } = await supabase
+        .from('user_upgrade_requests')
+        .insert({
+          user_id: user.id,
+          from_role: 'guest',
+          to_role: 'user',
+          request_reason: values.reason || '申请升级为普通用户，开通消息发送权限',
+          status: 'pending'
+        });
+
+      if (error) {
+        console.error('提交升级申请失败:', error);
+        message.error('提交失败，请重试');
+        return;
+      }
+
+      message.success('升级申请已提交，请等待管理员审核');
+      setUpgradeModalVisible(false);
+      upgradeForm.resetFields();
+    } catch (error) {
+      console.error('提交升级申请异常:', error);
+      message.error('提交失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getRoleText = (role) => {
     const roleMap = {
+      guest: '游客用户', // 🎭 新增游客角色
       user: '普通用户',
       admin: '管理员',
       super_admin: '超级管理员'
@@ -157,6 +224,36 @@ const UserProfile = () => {
       <Text type="secondary">查看和管理您的账户信息</Text>
 
       <div style={{ marginTop: '24px' }}>
+
+        {/* 🎭 游客用户升级提示 */}
+        {isGuest() && (
+          <Alert
+            message="游客模式"
+            description={
+              <div>
+                <p>您当前是游客用户，可以浏览和配置系统，但无法发送消息。</p>
+                <p style={{ marginBottom: '12px' }}>如需使用完整功能，请申请升级为普通用户：</p>
+                <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                  <li>✅ 可以立即发送消息</li>
+                  <li>✅ 可以创建定时任务</li>
+                  <li>✅ 享受完整功能权限</li>
+                </ul>
+                <p style={{ margin: '8px 0 0 0' }}>
+                  <Button 
+                    type="primary" 
+                    size="small" 
+                    onClick={handleUpgradeRequest}
+                  >
+                    申请升级为普通用户
+                  </Button>
+                </p>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: '16px' }}
+          />
+        )}
 
         {/* 邮箱检查警告 */}
         {!hasEmail && (
@@ -331,6 +428,86 @@ const UserProfile = () => {
                   保存邮箱
                 </Button>
                 <Button onClick={() => setEmailModalVisible(false)}>
+                  取消
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* 🎭 升级申请Modal */}
+        <Modal
+          title="申请升级为普通用户"
+          open={upgradeModalVisible}
+          onCancel={() => setUpgradeModalVisible(false)}
+          footer={null}
+          width={500}
+        >
+          <Form
+            form={upgradeForm}
+            layout="vertical"
+            onFinish={handleUpgradeSubmit}
+          >
+            <Alert
+              message="游客模式限制"
+              description={
+                <div>
+                  <p>游客用户可以使用以下功能：</p>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>✅ 浏览系统界面</li>
+                    <li>✅ 创建和配置推送任务</li>
+                    <li>✅ 添加Webhook地址</li>
+                    <li>✅ 上传图片生成链接</li>
+                  </ul>
+                  <p style={{ margin: '8px 0 0 0', color: '#ff4d4f' }}>
+                    ❌ 但无法实际发送消息（立即发送和定时发送均不可用）
+                  </p>
+                </div>
+              }
+              type="warning"
+              showIcon
+              style={{ marginBottom: '16px' }}
+            />
+            
+            <Form.Item
+              label="当前角色"
+              name="currentRole"
+            >
+              <Input disabled value="游客用户" />
+            </Form.Item>
+            
+            <Form.Item
+              label="目标角色"
+              name="targetRole"
+            >
+              <Input disabled value="普通用户" />
+            </Form.Item>
+
+            <Form.Item
+              label="申请理由（可选）"
+              name="reason"
+            >
+              <Input.TextArea 
+                rows={4}
+                placeholder="请简要说明申请升级的原因，例如：需要使用消息发送功能进行营销推广"
+                maxLength={200}
+              />
+            </Form.Item>
+            
+            <Alert
+              message="审核说明"
+              description="提交申请后，管理员将在1-3个工作日内审核。审核通过后，您将自动升级为普通用户，可以使用完整功能。"
+              type="info"
+              showIcon
+              style={{ marginBottom: '16px' }}
+            />
+
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit" loading={loading}>
+                  提交申请
+                </Button>
+                <Button onClick={() => setUpgradeModalVisible(false)}>
                   取消
                 </Button>
               </Space>
