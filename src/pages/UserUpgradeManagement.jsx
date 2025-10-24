@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Tag, message, Modal, Form, Input, Typography, Alert, Empty, Spin } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, Table, Button, Space, Tag, message, Modal, Form, Input, Typography, Alert, Empty, Spin, Pagination } from 'antd';
 import { CheckOutlined, CloseOutlined, UserOutlined, ClockCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -21,6 +21,20 @@ const UserUpgradeManagement = () => {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectingRequest, setRejectingRequest] = useState(null);
   const [rejectForm] = Form.useForm();
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    setPageSize(size);
+  };
+
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return (requests || []).slice(start, start + pageSize);
+  }, [requests, currentPage, pageSize]);
 
   // 获取待审核列表
   const fetchPendingRequests = async () => {
@@ -126,7 +140,7 @@ const UserUpgradeManagement = () => {
     {
       title: '用户信息',
       key: 'user',
-      width: 200,
+      width: '23%',
       render: (_, record) => (
         <div>
           <div><UserOutlined /> <strong>{record.user?.nickname || '未知用户'}</strong></div>
@@ -134,7 +148,7 @@ const UserUpgradeManagement = () => {
             {record.user?.email || '无邮箱'}
           </div>
           <div style={{ fontSize: '12px', color: '#999' }}>
-            注册时间: {record.user?.created_at ? dayjs(record.user.created_at).format('YYYY-MM-DD') : '-'}
+            注册: {record.user?.created_at ? dayjs(record.user.created_at).format('YYYY-MM-DD') : '-'}
           </div>
         </div>
       )
@@ -142,11 +156,12 @@ const UserUpgradeManagement = () => {
     {
       title: '角色变更',
       key: 'role_change',
-      width: 150,
+      width: '13%',
+      align: 'center',
       render: (_, record) => (
-        <div>
+        <div style={{ textAlign: 'center' }}>
           <Tag color="default">{getRoleText(record.from_role)}</Tag>
-          <div style={{ textAlign: 'center', margin: '4px 0' }}>↓</div>
+          <div style={{ margin: '4px 0', color: '#999' }}>↓</div>
           <Tag color="success">{getRoleText(record.to_role)}</Tag>
         </div>
       )
@@ -155,7 +170,7 @@ const UserUpgradeManagement = () => {
       title: '申请理由',
       dataIndex: 'request_reason',
       key: 'request_reason',
-      width: 250,
+      width: '33%',
       render: (reason) => (
         <Paragraph 
           ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
@@ -169,7 +184,7 @@ const UserUpgradeManagement = () => {
       title: '申请时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 150,
+      width: '18%',
       render: (time) => (
         <div>
           <div>{dayjs(time).format('YYYY-MM-DD HH:mm')}</div>
@@ -183,10 +198,10 @@ const UserUpgradeManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 150,
-      fixed: 'right',
+      width: '13%',
+      align: 'center',
       render: (_, record) => (
-        <Space direction="vertical" size="small">
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
           <Button
             type="primary"
             size="small"
@@ -248,6 +263,7 @@ const UserUpgradeManagement = () => {
       <Text type="secondary">审核和管理用户角色升级申请</Text>
 
       <Card 
+        className="user-upgrade-card"
         style={{ marginTop: '24px' }}
         title={
           <Space>
@@ -270,35 +286,47 @@ const UserUpgradeManagement = () => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         ) : (
-          <Spin spinning={loading}>
-            <Alert
-              message="审核说明"
-              description={
-                <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                  <li>批准后，用户将立即升级为普通用户，可以发送消息</li>
-                  <li>拒绝后，用户仍为游客身份，需重新申请</li>
-                  <li>建议根据用户注册时间、邮箱等信息判断是否批准</li>
-                </ul>
-              }
-              type="info"
-              showIcon
-              style={{ marginBottom: '16px' }}
-            />
-
+          <>
             <Table
               columns={columns}
-              dataSource={requests}
+              dataSource={paginatedRequests}
+              loading={loading}
               rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total) => `共 ${total} 条记录`
-              }}
-              scroll={{ x: 1000 }}
+              pagination={false}
             />
-          </Spin>
+            <div className="upgrade-pagination">
+              <div className="ant-pagination-total-text">
+                {`共${requests?.length || 0}条: 当前为${(requests && requests.length) ? ((currentPage - 1) * pageSize + 1) : 0}~${Math.min(currentPage * pageSize, requests?.length || 0)}`}
+              </div>
+              <Pagination
+                current={currentPage}
+                pageSize={pageSize}
+                total={requests?.length || 0}
+                showSizeChanger
+                showQuickJumper
+                onChange={handlePageChange}
+                onShowSizeChange={handlePageChange}
+                pageSizeOptions={[10, 20, 50, 100]}
+              />
+            </div>
+          </>
         )}
       </Card>
+
+      {/* 审核说明 - 移到卡片外部 */}
+      <Alert
+        message="审核说明"
+        description={
+          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+            <li>批准后，用户将立即升级为普通用户，可以发送消息</li>
+            <li>拒绝后，用户仍为游客身份，需重新申请</li>
+            <li>建议根据用户注册时间、邮箱等信息判断是否批准</li>
+          </ul>
+        }
+        type="info"
+        showIcon
+        style={{ marginTop: '24px' }}
+      />
 
       {/* 拒绝理由Modal */}
       <Modal
@@ -378,3 +406,156 @@ const UserUpgradeManagement = () => {
 
 export default UserUpgradeManagement;
 
+// 添加分页样式（与账户管理一致）
+const upgradePaginationStyles = `
+  /* 让表格完全铺满卡片 */
+  .user-upgrade-card .ant-card-body {
+    padding: 0 !important;
+  }
+  
+  .user-upgrade-card .ant-card-head {
+    padding: 16px 24px;
+  }
+  
+  .user-upgrade-card .ant-table-wrapper {
+    padding: 0 24px;
+  }
+  
+  .user-upgrade-card .ant-table {
+    margin: 0;
+  }
+
+  .upgrade-pagination {
+    margin-top: 0;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 24px;
+    border-top: 1px solid #e8e8e8;
+    background: #fafafa;
+    font-size: 12px;
+  }
+  
+  .upgrade-pagination .ant-pagination {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .upgrade-pagination .ant-pagination-total-text {
+    margin-right: 0;
+    color: #333;
+    font-weight: 500;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  
+  .upgrade-pagination .ant-pagination-options {
+    margin-left: 12px;
+    order: 3;
+  }
+  
+  .upgrade-pagination .ant-pagination-item {
+    margin: 0 1px;
+    min-width: 24px;
+    height: 24px;
+    line-height: 22px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  
+  .upgrade-pagination .ant-pagination-item a {
+    color: #333;
+    text-decoration: none;
+    font-size: 12px;
+  }
+  
+  .upgrade-pagination .ant-pagination-item-active {
+    background: #1890ff;
+    border-color: #1890ff;
+  }
+  
+  .upgrade-pagination .ant-pagination-item-active a {
+    color: #fff;
+  }
+  
+  .upgrade-pagination .ant-pagination-prev,
+  .upgrade-pagination .ant-pagination-next {
+    margin: 0 2px;
+    min-width: 24px;
+    height: 24px;
+    line-height: 22px;
+    border-radius: 3px;
+  }
+  
+  .upgrade-pagination .ant-pagination-prev a,
+  .upgrade-pagination .ant-pagination-next a {
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  .upgrade-pagination .ant-pagination-jump-prev,
+  .upgrade-pagination .ant-pagination-jump-next {
+    margin: 0 1px;
+  }
+  
+  .upgrade-pagination .ant-pagination-jump-prev .ant-pagination-item-container,
+  .upgrade-pagination .ant-pagination-jump-next .ant-pagination-item-container {
+    color: #333;
+  }
+  
+  /* 快速跳转样式 */
+  .upgrade-pagination .ant-pagination-options-quick-jumper {
+    margin-left: 6px;
+  }
+  
+  .upgrade-pagination .ant-pagination-options-quick-jumper input {
+    width: 40px;
+    height: 24px;
+    text-align: center;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  
+  /* 页面大小选择器样式 */
+  .upgrade-pagination .ant-pagination-options-size-changer {
+    margin-right: 6px;
+  }
+  
+  .upgrade-pagination .ant-pagination-options-size-changer .ant-select {
+    width: 70px;
+    font-size: 12px;
+  }
+  
+  /* 响应式分页 */
+  @media (max-width: 768px) {
+    .upgrade-pagination {
+      flex-direction: column;
+      gap: 6px;
+      padding: 6px;
+    }
+    
+    .upgrade-pagination .ant-pagination {
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .upgrade-pagination .ant-pagination-options {
+      margin-left: 0;
+      margin-top: 0;
+    }
+  }
+`
+
+// 动态添加样式
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style')
+  styleElement.textContent = upgradePaginationStyles
+  document.head.appendChild(styleElement)
+}
