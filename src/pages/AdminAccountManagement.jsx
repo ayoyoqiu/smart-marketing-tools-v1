@@ -640,6 +640,15 @@ export default AdminAccountManagement;
 
 // 添加分页样式
 const accountPaginationStyles = `
+  /* 🎯 确保表格完全填充容器宽度 */
+  .ant-table {
+    width: 100% !important;
+  }
+  
+  .ant-table table {
+    width: 100% !important;
+  }
+  
   .account-pagination {
     margin-top: 0;
     text-align: left;

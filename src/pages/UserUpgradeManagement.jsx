@@ -406,23 +406,41 @@ const UserUpgradeManagement = () => {
 
 export default UserUpgradeManagement;
 
-// 添加分页样式（与账户管理一致）
+// 添加分页样式（完全铺满卡片）
 const upgradePaginationStyles = `
-  /* 让表格完全铺满卡片 */
+  /* 让表格完全铺满卡片 - 零留白 */
   .user-upgrade-card .ant-card-body {
     padding: 0 !important;
   }
   
   .user-upgrade-card .ant-card-head {
     padding: 16px 24px;
+    border-bottom: none !important;
   }
   
   .user-upgrade-card .ant-table-wrapper {
-    padding: 0 24px;
+    padding: 0; /* 🎯 零留白：表格完全铺满 */
   }
   
   .user-upgrade-card .ant-table {
     margin: 0;
+    width: 100% !important; /* 🎯 强制表格宽度100%，填满整个容器 */
+  }
+  
+  .user-upgrade-card .ant-table table {
+    width: 100% !important; /* 🎯 确保内部table标签也是100% */
+  }
+  
+  /* 增加表格行高，补偿内部padding */
+  .user-upgrade-card .ant-table-thead > tr > th {
+    padding: 16px 24px; /* 🎯 增加左右padding以保持视觉平衡 */
+    background: #fafafa;
+    font-weight: 600;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .user-upgrade-card .ant-table-tbody > tr > td {
+    padding: 20px 24px; /* 🎯 增加左右padding以保持视觉平衡 */
   }
 
   .upgrade-pagination {
@@ -432,7 +450,7 @@ const upgradePaginationStyles = `
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 24px;
+    padding: 12px 24px; /* 🎯 与表格内容对齐 */
     border-top: 1px solid #e8e8e8;
     background: #fafafa;
     font-size: 12px;
