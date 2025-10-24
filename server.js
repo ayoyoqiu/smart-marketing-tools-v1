@@ -118,8 +118,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ezhbqeapgutzstdaohit.s
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2ODIzMTksImV4cCI6MjA3MTI1ODMxOX0.RyhROz_TL247GsEJtj86RdvDNPPLz6UX6Hep49p7DqE';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6aGJxZWFwZ3V0enN0ZGFvaGl0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTY4MjMxOSwiZXhwIjoyMDcxMjU4MzE5fQ.pMLHWW2m1lCKeqOBQVS-2Zgk9-3f-Oz0';
 
-// 使用匿名key，但通过后端API绕过RLS限制
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 🎭 后端使用Service Role Key绕过RLS限制
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const TABLES = {
   TASKS: 'tasks',
