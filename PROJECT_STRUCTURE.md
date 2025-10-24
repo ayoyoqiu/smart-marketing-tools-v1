@@ -40,7 +40,7 @@
 │   │   ├── Dashboard.jsx            # 仪表板
 │   │   ├── MessageEditor.jsx        # 消息编辑器
 │   │   ├── MessageTemplate.jsx      # 消息模板
-│   │   ├── ImageTools.jsx           # 图片URL工具
+│   │   ├── ImageTools.jsx           # 图片转URL
 │   │   ├── AIAssistant.jsx          # AI助手
 │   │   ├── HelpCenter.jsx           # 帮助中心
 │   │   └── Settings.jsx             # 设置页面

@@ -94,7 +94,7 @@ const ImageTools = () => {
       <div style={{ marginBottom: '24px' }}>
         <Title level={2} style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}>
           <PictureOutlined style={{ marginRight: '8px', color: theme === 'dark' ? '#69b1ff' : '#1890ff' }} />
-          图片URL工具
+          图片转URL
         </Title>
         <Text type="secondary" style={{ color: theme === 'dark' ? '#bfbfbf' : '#666666' }}>
           上传图片并获取可访问的URL链接，支持多种格式输出

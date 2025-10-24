@@ -10,9 +10,9 @@
 
 > 说明：以下截图文件位于 `public/images/`，如需更新请将同名图片替换为最新截图。
 
-| 首页 | 任务管理 | 图片URL工具 | 数据看板 |
+| 首页 | 任务管理 | 图片转URL | 数据看板 |
 | --- | --- | --- | --- |
-| ![首页预览](public/images/preview-home.png) | ![任务管理预览](public/images/preview-tasks.png) | ![图片URL工具预览](public/images/preview-image-tools.png) | ![数据看板预览](public/images/preview-dashboard.png) |
+| ![首页预览](public/images/preview-home.png) | ![任务管理预览](public/images/preview-tasks.png) | ![图片转URL预览](public/images/preview-image-tools.png) | ![数据看板预览](public/images/preview-dashboard.png) |
 
 占位图命名（请按需替换为真实截图）：
 - `public/images/preview-home.png` - 首页概览和快捷操作
@@ -189,7 +189,7 @@ npm run build
 7. 点击"创建任务"或"立即发送"
 
 ### 图片转URL
-1. 进入"图片URL工具"页面
+1. 进入"图片转URL"页面
 2. 拖拽或点击上传图片文件
 3. 等待图片处理完成
 4. 选择链接格式（直链、HTML、Markdown）

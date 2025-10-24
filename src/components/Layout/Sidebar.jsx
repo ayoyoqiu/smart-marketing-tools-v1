@@ -66,7 +66,7 @@ const Sidebar = () => {
       {
         key: '/image-tools',
         icon: <PictureOutlined />,
-        label: '图片URL工具',
+        label: '图片转URL',
         onClick: () => navigate('/image-tools')
       },
       {
