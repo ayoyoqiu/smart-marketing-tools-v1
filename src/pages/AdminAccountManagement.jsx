@@ -95,21 +95,7 @@ const AdminAccountManagement = () => {
       }
 
       // 根据新角色插入相应的角色记录
-      if (newRole === 'admin') {
-        // 管理员拥有双重角色
-        const { error: insertAdminError } = await supabase
-          .from('user_roles')
-          .insert([
-            { user_id: userId, role: 'admin', is_active: true },
-            { user_id: userId, role: 'user', is_active: true }
-          ]);
-
-        if (insertAdminError) {
-          console.error('❌ 插入管理员角色失败:', insertAdminError);
-        } else {
-          console.log('✅ 管理员角色插入成功');
-        }
-      } else if (newRole === 'super_admin') {
+      if (newRole === 'super_admin') {
         // 超级管理员拥有三重角色
         const { error: insertSuperAdminError } = await supabase
           .from('user_roles')
@@ -124,7 +110,21 @@ const AdminAccountManagement = () => {
         } else {
           console.log('✅ 超级管理员角色插入成功');
         }
-      } else {
+      } else if (newRole === 'admin') {
+        // 管理员拥有双重角色
+        const { error: insertAdminError } = await supabase
+          .from('user_roles')
+          .insert([
+            { user_id: userId, role: 'admin', is_active: true },
+            { user_id: userId, role: 'user', is_active: true }
+          ]);
+
+        if (insertAdminError) {
+          console.error('❌ 插入管理员角色失败:', insertAdminError);
+        } else {
+          console.log('✅ 管理员角色插入成功');
+        }
+      } else if (newRole === 'user') {
         // 普通用户只有 user 角色
         const { error: insertUserError } = await supabase
           .from('user_roles')
@@ -136,6 +136,19 @@ const AdminAccountManagement = () => {
           console.error('❌ 插入普通用户角色失败:', insertUserError);
         } else {
           console.log('✅ 普通用户角色插入成功');
+        }
+      } else if (newRole === 'guest') {
+        // 🎭 游客用户只有 guest 角色
+        const { error: insertGuestError } = await supabase
+          .from('user_roles')
+          .insert([
+            { user_id: userId, role: 'guest', is_active: true }
+          ]);
+
+        if (insertGuestError) {
+          console.error('❌ 插入游客用户角色失败:', insertGuestError);
+        } else {
+          console.log('✅ 游客用户角色插入成功');
         }
       }
 
@@ -154,7 +167,15 @@ const AdminAccountManagement = () => {
         return;
       }
       
-      const newRole = currentRole === 'admin' ? 'user' : 'admin';
+      // 🎭 根据当前角色确定新角色
+      let newRole;
+      if (currentRole === 'guest') {
+        newRole = 'user'; // 游客 → 普通用户
+      } else if (currentRole === 'user') {
+        newRole = 'admin'; // 普通用户 → 管理员
+      } else if (currentRole === 'admin') {
+        newRole = 'user'; // 管理员 → 普通用户
+      }
       
       // 更新用户主角色
       const { error: updateError } = await supabase
@@ -170,7 +191,14 @@ const AdminAccountManagement = () => {
       // 刷新账户列表
       await fetchAccounts();
 
-      message.success(`用户角色已切换为: ${newRole === 'admin' ? '管理员' : '普通用户'}`);
+      // 🎭 显示相应的提示信息
+      const roleNames = {
+        guest: '游客用户',
+        user: '普通用户',
+        admin: '管理员',
+        super_admin: '超级管理员'
+      };
+      message.success(`用户角色已切换为: ${roleNames[newRole]}`);
     } catch (error) {
       console.error('快速切换角色失败:', error);
       message.error('角色切换失败');
@@ -286,7 +314,7 @@ const AdminAccountManagement = () => {
     setEditingAccount(null);
     form.resetFields();
     form.setFieldsValue({
-      role: 'user',
+      role: 'guest', // 🎭 默认创建游客用户
       status: 'active'
     });
     setModalVisible(true);
@@ -310,14 +338,21 @@ const AdminAccountManagement = () => {
       key: 'role',
       render: (role, record) => {
         const colors = {
+          guest: 'default', // 🎭 新增游客角色
+          user: 'blue',
           admin: 'red',
-          super_admin: 'purple',
-          user: 'blue'
+          super_admin: 'purple'
+        };
+        const roleNames = {
+          guest: '游客用户', // 🎭 新增游客角色
+          user: '普通用户',
+          admin: '管理员',
+          super_admin: '超级管理员'
         };
         return (
           <Space>
             <Tag color={colors[role] || 'default'}>
-              {role === 'admin' ? '管理员' : role === 'super_admin' ? '超级管理员' : '普通用户'}
+              {roleNames[role] || role}
             </Tag>
             {record.id !== user?.id && record.role !== 'super_admin' && ( // 不能修改自己的角色，也不能修改超级管理员
               <Button
@@ -326,7 +361,10 @@ const AdminAccountManagement = () => {
                 onClick={() => quickToggleRole(record.id, role)}
                 style={{ padding: '0 4px', height: 'auto' }}
               >
-                {role === 'admin' ? '降级为普通用户' : '升级为管理员'}
+                {/* 🎭 根据角色显示不同的升级/降级文案 */}
+                {role === 'admin' ? '降级为普通用户' : 
+                 role === 'user' ? '升级为管理员' :
+                 role === 'guest' ? '升级为普通用户' : '升级'}
               </Button>
             )}
           </Space>
@@ -384,9 +422,14 @@ const AdminAccountManagement = () => {
               type="text"
               icon={<CrownOutlined />}
               onClick={() => quickToggleRole(record.id, record.role)}
-              style={{ color: record.role === 'admin' ? '#faad14' : '#1890ff' }}
+              style={{ 
+                color: record.role === 'admin' ? '#faad14' : 
+                       record.role === 'guest' ? '#52c41a' : '#1890ff' 
+              }}
             >
-              {record.role === 'admin' ? '降级' : '升级'}
+              {/* 🎭 根据角色显示不同的文案 */}
+              {record.role === 'admin' ? '降级' : 
+               record.role === 'guest' ? '升级' : '升级'}
             </Button>
           )}
           <Popconfirm
@@ -457,10 +500,13 @@ const AdminAccountManagement = () => {
               <Text strong>总用户数:</Text> <Tag color="blue">{accounts.length}</Tag>
             </div>
             <div>
-              <Text strong>管理员:</Text> <Tag color="red">{accounts.filter(a => a.role === 'admin').length}</Tag>
+              <Text strong>游客用户:</Text> <Tag color="default">{accounts.filter(a => a.role === 'guest').length}</Tag>
             </div>
             <div>
               <Text strong>普通用户:</Text> <Tag color="blue">{accounts.filter(a => a.role === 'user').length}</Tag>
+            </div>
+            <div>
+              <Text strong>管理员:</Text> <Tag color="red">{accounts.filter(a => a.role === 'admin').length}</Tag>
             </div>
             <div>
               <Text strong>超级管理员:</Text> <Tag color="purple">{accounts.filter(a => a.role === 'super_admin').length}</Tag>
@@ -536,6 +582,7 @@ const AdminAccountManagement = () => {
             <Select
               style={{ width: '100%' }}
               options={[
+                { label: '游客用户', value: 'guest' }, // 🎭 新增游客角色选项
                 { label: '普通用户', value: 'user' },
                 { label: '管理员', value: 'admin' },
                 { label: '超级管理员', value: 'super_admin' }
@@ -547,7 +594,8 @@ const AdminAccountManagement = () => {
             message="角色说明"
             description={
               <div>
-                <div>• <Text strong>普通用户</Text>: 只能管理自己的任务和地址</div>
+                <div>• <Text strong>游客用户</Text>: 只能配置地址和任务，无法发送消息（新注册默认）</div>
+                <div>• <Text strong>普通用户</Text>: 可以管理自己的任务和地址，可以发送消息</div>
                 <div>• <Text strong>管理员</Text>: 可以管理所有用户，拥有双重身份（管理员+普通用户）</div>
                 <div>• <Text strong>超级管理员</Text>: 系统最高权限，不可删除</div>
               </div>
